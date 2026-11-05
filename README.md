@@ -95,7 +95,6 @@ docs.json navigation ──────► scripts/build-llms.mjs ────�
 | `api-reference/openapi.json` | **Generated.** The API reference Mintlify renders |
 | `mcp/tools/*.mdx`, `mcp/prompts-and-resources.mdx` | **Generated** from the MCP server's tool list |
 | `llms.txt` | **Generated** from `scripts/llms-header.md` and the navigation |
-| `213348b4285c14f2b09922babb3118aa.txt` | IndexNow key. Bing fetches it to confirm `npm run indexnow` submissions come from us. Keep it at the root |
 | `docs.json` | Site config. The API and MCP tool navigation groups are **generated** |
 | `snippets/` | React components used in pages, such as the MCP install picker |
 | `style.css`, `fonts/`, `logo/`, `logos/`, `icons/` | The Heliyos brand layer |
@@ -120,7 +119,6 @@ npm run dev                           # local preview with hot reload
 | `npm run check:docs` | Stale `llms.txt`, secrets and private references, copy rules, broken links | Everyone |
 | `npm run build` | Regenerates icons, the MCP tool list, the OpenAPI document, the MCP pages and `llms.txt` | Maintainers |
 | `npm run check` | Everything in `check:docs`, plus drift between the overlays and the live API | Maintainers |
-| `npm run indexnow` | After a deploy: submits every URL in the live sitemap to Bing (and the other IndexNow engines). Add `-- --dry-run` to list them first | Maintainers |
 
 `npm run build` and `npm run check` read the API's OpenAPI documents and a built MCP server from the paths in `.env.build` (copy [`.env.build.example`](.env.build.example)). They fail when the docs and the product drift apart: an endpoint the MCP server calls without an overlay, an overlay for an endpoint that no longer exists, or a parameter or body field nobody described.
 
