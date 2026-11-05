@@ -1,0 +1,30 @@
+---
+title: "Timeline and activity"
+description: "Three views of what happened on a record: events, interactions and the AI-written timeline."
+---
+
+Heliyos keeps three related views of a record's activity. Pick the one that fits your question.
+
+| You want | Use | What you get |
+| --- | --- | --- |
+| Exactly what changed, by whom, and when | [List record events](/api-reference/activities/list-record-events) | Every create, update and delete on the record and on anything linked to it, with before and after snapshots and who acted: a person, a worker or the system. |
+| The emails and meetings themselves | [List interactions](/api-reference/interactions/list-interactions) | Synced email threads and meetings, filterable by record, with participants and content. |
+| A readable summary of recent activity | [List timeline entries](/api-reference/timeline/list-timeline-entries) | AI-written summary entries, produced on a schedule rather than on every change. |
+
+## Events
+
+Events are the audit trail. Each event says what kind of change it was (`AUDIT`, `INTERACTION` or `ENRICHMENT`), the operation (`CREATE`, `UPDATE`, `DELETE`), and who acted (`USER`, `AGENT` for a worker, or `SYSTEM`). This is how Heliyos keeps worker activity visible: a field a worker changed shows the worker as the actor.
+
+A record's events include the events of things linked to it, such as a note on the company or a task about the deal. Use `metadata.objectType` to tell them apart.
+
+## Interactions
+
+Interactions come from connected mailboxes and calendars. Email threads and meetings link to the people and companies they involve. Read them to sync activity into another system, or to give your own tools the same context Heliyos workers use.
+
+<Note>
+  Interactions can include message bodies and meeting transcripts. Store and display them with the same care as the mailboxes they came from.
+</Note>
+
+## The AI-written timeline
+
+The timeline is a narrative summary that Heliyos writes on a schedule. A record without recent activity may have no entries. Use it for a quick read of an account, and events for anything you need to be exact about.

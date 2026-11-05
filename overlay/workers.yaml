@@ -1,0 +1,1526 @@
+tag:
+  name: Workers and runs
+  icon: /icons/app-workers.svg
+  order: 70
+  description: >-
+    Workers are the AI teammates of your workspace (the API calls them agents). Define what each one
+    does and what starts it, ask Heliyos to do work, and follow every run, its steps and the reviews
+    it waits on.
+
+components:
+  WorkerTriggerInput:
+    type: object
+    description: One thing that starts the worker.
+    required: [type]
+    properties:
+      type:
+        type: string
+        enum: [task_created, mention, event, scheduled, webhook, schedule, playground]
+        description: |
+          - `task_created`: the worker runs when a task is created. `match.taskType` limits it to some task types.
+          - `mention`: the worker runs when someone mentions it in chat. Every active worker answers mentions, with or without this entry; `match.mentionPattern` is kept with it.
+          - `event`: the worker runs on the named events in `events`, for example `task.created`,
+            `deal.updated`, `email.received`, `meeting.completed` or `company.attribute_updated`.
+            `*` means every event. An event name that Heliyos never emits never matches.
+          - `scheduled`: the worker runs on a schedule. Put a 5-field cron in `match.schedule` (UTC unless
+            `match.timezone` is set), or a one-time local time in `match.at` with `match.timezone`.
+          - `webhook`: older spelling of `event`, with the event name in `match.webhookEvent`. Saved as `event`.
+          - `schedule`: older spelling of `scheduled`. Saved as `scheduled`.
+          - `playground`: used by test runs in the Heliyos app. Has no effect when set through the API.
+      source:
+        type: string
+        enum: [default, user]
+        description: Accepted and ignored. Triggers you send are always saved with `source` `user`.
+      events:
+        type: array
+        maxItems: 200
+        description: "`event` triggers only: the event names to run on. Up to 200 names of up to 200 characters."
+        items: { type: string, maxLength: 200 }
+        example: [deal.updated, meeting.completed]
+      match:
+        type: object
+        description: |
+          Conditions and timing. These keys are stored; any other key is dropped:
+          - `taskType` (array of strings): `task_created` only, the task types to run on.
+          - `taskStatus` (string): a task status condition.
+          - `mentionPattern` (string): `mention` only, text the mention must contain.
+          - `webhookEvent` (string or array): `webhook` only, the event names.
+          - `schedule` (string): `scheduled` only, a 5-field cron such as `0 8 * * 1-5`.
+          - `at` (string): `scheduled` only, a one-time local wall time `YYYY-MM-DDTHH:MM:SS`.
+          - `timezone` (string): an IANA zone such as `Europe/Berlin` for `schedule` or `at`. Default UTC.
+          - `recurrence` (object): the Heliyos app's own description of the schedule, so its editor can reopen it.
+        additionalProperties: true
+        example: { schedule: "0 8 * * 1-5", timezone: Europe/Berlin }
+      dependencies:
+        type: array
+        maxItems: 50
+        description: Ids of other workers in this workspace that must finish before this one starts. Up to 50.
+        items: { $ref: "#/components/schemas/ObjectId" }
+
+  WorkerTrigger:
+    type: object
+    description: A stored trigger. Event subscriptions are stored as `event`, schedules as `scheduled`.
+    properties:
+      type:
+        type: string
+        description: "`task_created`, `mention`, `event`, `scheduled` or `playground`. Workers saved long ago can still show `webhook` or `schedule`."
+      source:
+        type: string
+        enum: [default, user]
+        description: >-
+          `default`: built into a default worker. It stays when you change the worker's triggers.
+          `user`: added by a person or the API, removable.
+      events:
+        type: array
+        description: "`event` triggers: the subscribed event names."
+        items: { type: string }
+      match:
+        type: object
+        additionalProperties: true
+        description: Conditions and timing, as in the trigger input.
+      dependencies:
+        type: array
+        description: Workers that must finish first.
+        items: { $ref: "#/components/schemas/ObjectId" }
+
+  WorkerResources:
+    type: object
+    description: The knowledge files the worker reads.
+    properties:
+      scope:
+        type: string
+        enum: [everything, org_knowledge, account_files, selected_files]
+        description: |
+          The file scope picked in the Heliyos app: `everything` (the default), `org_knowledge`
+          (knowledge base files), `account_files` (files on records) or `selected_files` (files you
+          pick). Which knowledge base files the worker reads is set by `allKbFiles` and
+          `linkedKbFileIds`.
+      allKbFiles:
+        type: boolean
+        description: "`true` links every knowledge base file of the workspace. When absent, every file is linked unless `linkedKbFileIds` names some."
+      linkedKbFileIds:
+        type: array
+        maxItems: 1000
+        description: Knowledge base files linked to the worker. Each must be a file of this workspace. Up to 1,000.
+        items: { $ref: "#/components/schemas/ObjectId" }
+      fileIds:
+        type: array
+        maxItems: 1000
+        description: Other files picked for the worker. Each must be a file of this workspace. Up to 1,000.
+        items: { $ref: "#/components/schemas/ObjectId" }
+
+  Worker:
+    type: object
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the worker belongs to.
+      name:
+        type: string
+        description: The worker's name, unique in the workspace.
+      type:
+        type: string
+        enum: [default, custom]
+        description: >-
+          `default`: built into every workspace. Only its instructions, description, icon, active flag,
+          memory and its own triggers can change, and it cannot be deleted. `custom`: created by you,
+          fully editable and deletable.
+      isActive:
+        type: boolean
+        description: "`false` pauses the worker: nothing starts it and Heliyos does not call it."
+      icon:
+        type: string
+        description: The icon the Heliyos app shows for the worker.
+      isExcluded:
+        type: boolean
+        description: "`true` for older built-in workers that run on a separate pipeline. They are listed for reference, and Heliyos never calls them."
+      description:
+        type: string
+        description: One line that tells Heliyos (and people) what the worker is for. Heliyos reads it to decide when to call the worker.
+      instructions:
+        type: string
+        description: What the worker does and how, in Markdown.
+      toolName:
+        type: string
+        description: The stable snake_case name Heliyos calls the worker by. Set on create and never changed.
+      toolNames:
+        type: array
+        description: The built-in tools the worker may use, by name.
+        items: { type: string }
+      actionIds:
+        type: array
+        description: The workspace actions the worker may run.
+        items: { $ref: "#/components/schemas/ObjectId" }
+      toolPolicy:
+        type: object
+        description: Limits on what the worker may do.
+        properties:
+          readOnly:
+            type: boolean
+            description: "`true`: the worker may read but never change data."
+      memory:
+        type: object
+        properties:
+          enabled:
+            type: boolean
+            description: "`true`: the worker keeps memory across runs."
+      resources: { $ref: "#/components/schemas/WorkerResources" }
+      triggers:
+        type: array
+        description: What starts the worker. An empty list means it only runs when Heliyos or a person calls it.
+        items: { $ref: "#/components/schemas/WorkerTrigger" }
+      schedule:
+        type: object
+        description: Legacy cron list. Schedules live on `scheduled` triggers now.
+        properties:
+          cron:
+            type: array
+            items: { type: string }
+            description: 5-field cron expressions.
+      runtime:
+        type: string
+        enum: [sandbox, light]
+        description: How Heliyos runs the worker. Set by Heliyos, read-only.
+      metadata: { $ref: "#/components/schemas/AuditMetadata" }
+      createdAt: { $ref: "#/components/schemas/Timestamp" }
+      updatedAt: { $ref: "#/components/schemas/Timestamp" }
+
+  WorkerScheduleSync:
+    type: object
+    description: >-
+      What happened to the worker's schedules after the save. The worker is saved even when a
+      schedule fails, but a failed schedule never fires: check `failed`.
+    properties:
+      created:
+        type: array
+        description: >-
+          Ids of the worker's schedules that are registered after this save, including ones that
+          already existed. A one-time `at` in the past is skipped and not listed.
+        items: { type: string }
+      deleted:
+        type: array
+        description: Ids of schedules removed by this save because no trigger asks for them any more.
+        items: { type: string }
+      failed:
+        type: array
+        description: One line per schedule that could not be registered. Empty when every schedule is in place.
+        items: { type: string }
+
+  WorkerSaved:
+    allOf:
+      - { $ref: "#/components/schemas/Worker" }
+      - type: object
+        properties:
+          scheduleSync: { $ref: "#/components/schemas/WorkerScheduleSync" }
+
+  WorkerRunOutput:
+    type: object
+    additionalProperties: true
+    description: The run's final reply.
+    properties:
+      final_response_by:
+        type: string
+        description: Who wrote the reply, Heliyos or the worker that owned the answer.
+      response:
+        type: string
+        description: The reply text, in Markdown.
+
+  AskHeliyosResult:
+    type: object
+    properties:
+      runId:
+        type: string
+        nullable: true
+        description: >-
+          The run that handles your message. Follow it with **Get a run**. `null` only when no run could be
+          found for the message (status `not_found`).
+      status:
+        type: string
+        description: |
+          With `wait` 0, what happened to the message:
+          - `queued`: a new run started, or the message was queued on the thread's running run.
+          - `queued_until_decision`: the thread's run waits for a review; your message is read after the decision.
+          - `resuming`: the thread's paused or waiting run resumed with your message.
+          - `already_running`: the thread's run was already working, and your message may not have
+            reached it. Follow the run, then send the message again once it settles.
+          - `not_found`: the thread's run disappeared before the message reached it. Nothing ran; send again.
+
+          With `wait` above 0, the run's own status when the call returns (see **Get a run** for every
+          value). A run that is still working returns `running` or `queued`.
+      threadId:
+        type: string
+        nullable: true
+        description: The conversation. Send it back as `threadId` to continue it. Heliyos makes one up when you send none.
+      output:
+        allOf: [{ $ref: "#/components/schemas/WorkerRunOutput" }]
+        description: The run's final reply, present when the run produced one within `wait`.
+
+  WorkerRunStep:
+    type: object
+    properties:
+      seq:
+        type: integer
+        description: The step's position in the run, starting at 1.
+      type:
+        type: string
+        description: |
+          What the step was: `worker` (a worker was called), `tool` (a tool call), `approval` (a review
+          was raised), `wait` and `wakeup` (the run scheduled a wait and woke up), `handoff`, `final`
+          (the reply). Older or light runs can show other kinds.
+      title:
+        type: string
+        nullable: true
+        description: The worker, tool or step label.
+      status:
+        type: string
+        nullable: true
+        description: The step's status, for example `pending`, `running`, `completed`, `failed`, `waiting`, `approved` or `rejected`.
+      startedAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: When the step started.
+      endedAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: When the step ended. `null` while it runs.
+      summary:
+        type: string
+        nullable: true
+        description: The first 200 characters of the step's error, else of its result's text. `null` when the result is raw data.
+      input:
+        nullable: true
+        description: "`include=step_payloads` only: the step's raw input."
+      output:
+        nullable: true
+        description: "`include=step_payloads` only: the step's raw output."
+      error:
+        nullable: true
+        description: "`include=step_payloads` only: the step's raw error."
+
+  WorkerRunReview:
+    type: object
+    description: A review the run raised. Reviews are decided by a person in Heliyos, under Review.
+    properties:
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The review's id.
+      status:
+        type: string
+        nullable: true
+        enum: [PENDING, PROCESSING, APPROVED, REJECTED, null]
+        description: |
+          - `PENDING`: waiting for a person.
+          - `PROCESSING`: decided, and the decision is being carried out.
+          - `APPROVED`: approved. The run goes on with the action.
+          - `REJECTED`: rejected. The run goes on without it.
+      type:
+        type: string
+        nullable: true
+        description: >-
+          What is being reviewed, for example `email_draft` (an email to send), `deal_update` (a deal
+          change), `meeting_scheduled` or `classification_label`. The set is open: an action from a
+          connected app uses its own name. See [List reviews](/api-reference/reviews/list-reviews).
+
+  WorkerRunUsage:
+    type: object
+    additionalProperties: true
+    description: What the run used. Counters appear once there is something to count.
+    properties:
+      credits:
+        type: number
+        description: Credits charged to the workspace by this run (custom worker calls).
+      requests:
+        type: integer
+        description: Model requests made.
+      inputTokens:
+        type: integer
+        description: Input tokens used.
+      outputTokens:
+        type: integer
+        description: Output tokens used.
+      totalTokens:
+        type: integer
+        description: Input plus output tokens.
+
+  WorkerRunTrigger:
+    type: object
+    description: What set the run off, without its payload.
+    properties:
+      type:
+        type: string
+        description: The trigger kind, for example `chat`, `event`, `mention`, `task_created` or `scheduled`.
+      objectType:
+        type: string
+        description: The kind of record the trigger named, for example `task`, `company` or `interaction`.
+      objectId:
+        type: string
+        description: The id of that record.
+      event:
+        type: string
+        description: The event name, for example `deal.updated`.
+
+  WorkerRun:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The run id.
+      status:
+        type: string
+        enum: [queued, running, awaiting_approval, paused, waiting, scheduled, completed, failed, skipped, cancelled, stopped]
+        description: |
+          Still going:
+          - `queued`: created, about to start.
+          - `running`: working now.
+
+          Waiting on a person or a schedule (it will not move until that happens):
+          - `awaiting_approval`: paused on one or more reviews in `reviews`. It resumes when every one is decided.
+          - `paused`: paused by a person. It resumes when someone resumes it or sends a message on its thread.
+          - `waiting`: it set itself a wait and wakes up at the scheduled time.
+          - `scheduled`: it waits for a scheduled time.
+
+          Finished, never changes again:
+          - `completed`: done. `output` has the reply.
+          - `failed`: stopped on an error. Read `error` (with `include=detail`) and the failed step.
+          - `skipped`: did not run, for example because the same event already started a run.
+          - `cancelled`: cancelled before it finished.
+          - `stopped`: stopped by a person.
+      trigger:
+        allOf: [{ $ref: "#/components/schemas/WorkerRunTrigger" }]
+        nullable: true
+        description: What set the run off.
+      startedAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: When the run started.
+      endedAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: When it finished. `null` until it is in a finished status.
+      threadId:
+        type: string
+        nullable: true
+        description: The conversation the run belongs to, for chat runs.
+      taskId:
+        type: string
+        nullable: true
+        description: The task the run works on, for task runs.
+      steps:
+        type: array
+        description: Every step so far, in order.
+        items: { $ref: "#/components/schemas/WorkerRunStep" }
+      reviews:
+        type: array
+        description: The reviews the run raised, oldest first.
+        items: { $ref: "#/components/schemas/WorkerRunReview" }
+      usage:
+        allOf: [{ $ref: "#/components/schemas/WorkerRunUsage" }]
+        nullable: true
+        description: Credits and model usage so far.
+      output:
+        allOf: [{ $ref: "#/components/schemas/WorkerRunOutput" }]
+        description: The run's final reply, once it has one.
+      title:
+        type: string
+        nullable: true
+        description: "`include=detail` only: the run's title."
+      agentName:
+        type: string
+        nullable: true
+        description: "`include=detail` only: who planned the run, Heliyos or the worker it focused on."
+      surface:
+        type: string
+        nullable: true
+        description: "`include=detail` only: where the run started. See `surface` on **List runs**."
+      error:
+        type: string
+        nullable: true
+        description: "`include=detail` only: why the run failed."
+      workers:
+        type: array
+        description: "`include=detail` only: the workers that took part."
+        items:
+          type: object
+          properties:
+            nodeId: { type: string, description: The worker's step in the run. }
+            agentId: { type: string, description: The worker's id. }
+            agentName: { type: string, description: The worker's name. }
+            status: { type: string, description: The worker's status in this run. }
+            startedAt: { $ref: "#/components/schemas/Timestamp" }
+            endedAt: { $ref: "#/components/schemas/Timestamp" }
+      toolCalls:
+        type: integer
+        description: "`include=detail` only: how many tool calls the run made."
+      createdAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: "`include=detail` only: when the run was created."
+      graph:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: "`include=step_payloads` only: the run's full execution graph (`nodes`, `edges`)."
+
+  WorkerRunListItem:
+    type: object
+    additionalProperties: true
+    description: >-
+      A run as stored, without its step log and execution graph. Read one run with **Get a run** for its
+      steps. Runs can carry more fields than these; treat unknown ones as internal and subject to change.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      orchestratorRunId:
+        type: string
+        description: The run id. Pass it to **Get a run**.
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace.
+      status:
+        type: string
+        description: The run's status. See `status` on **Get a run** for every value.
+      title:
+        type: string
+        description: A short title for the run.
+      surface:
+        type: string
+        description: "Where the run started: `chat` (Ask Heliyos), `worker_chat`, `task_chat`, `background` (an event, schedule or task) or `worker_direct`."
+      runtime:
+        type: string
+        description: "`sandbox` or `light`."
+      agentName:
+        type: string
+        nullable: true
+        description: The worker the run focused on, when there was one.
+      userInput:
+        type: string
+        description: The message that started a chat run, up to 4,000 characters.
+      trigger:
+        type: object
+        additionalProperties: true
+        description: The trigger that started the run, with its payload.
+      triggerRef:
+        allOf: [{ $ref: "#/components/schemas/WorkerRunTrigger" }]
+        description: The trigger kind and the record it named.
+      relationships:
+        type: array
+        description: Every record the run touched.
+        items:
+          type: object
+          properties:
+            objectId: { type: string, description: The record's id. }
+            objectType: { type: string, description: "The record's kind, for example `company`, `people`, `deals`, `task` or `interaction`." }
+      taskId:
+        type: string
+        nullable: true
+        description: The task the run works on.
+      threadId:
+        type: string
+        nullable: true
+        description: The conversation, for chat runs.
+      userId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        nullable: true
+        description: The person who started the run, for chat runs.
+      workers:
+        type: array
+        description: The workers that took part (`agentId`, `agentName`, `nodeId`, `status`).
+        items: { type: object, additionalProperties: true }
+      toolCalls:
+        type: integer
+        description: How many tool calls the run made.
+      finalOutput:
+        allOf: [{ $ref: "#/components/schemas/WorkerRunOutput" }]
+        nullable: true
+        description: The final reply, once there is one.
+      usage: { $ref: "#/components/schemas/WorkerRunUsage" }
+      error:
+        type: string
+        description: Why the run failed.
+      createdAt: { $ref: "#/components/schemas/Timestamp" }
+      updatedAt: { $ref: "#/components/schemas/Timestamp" }
+      completedAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the run finished.
+
+  WorkerIntegrationLink:
+    type: object
+    description: >-
+      The connected app that delivers this trigger or performs this action. Present only when one
+      does; Heliyos's own triggers and tools have none.
+    properties:
+      title:
+        type: string
+        description: >-
+          The app's name, for example `Gmail`, `Outlook`, `Google Drive`, `OneDrive`, `HubSpot` or
+          `Typeform`. Where two apps can do the job (email and calendar through Gmail or Outlook), the
+          connected one is named; with neither connected, the first one is.
+      iconSrc:
+        type: string
+        description: The app's logo URL. Absent when Heliyos has no logo for it.
+      connected:
+        type: boolean
+        description: >-
+          `true` when the workspace has this app connected and working now. While it is `false`, the
+          trigger does not fire and the action cannot work. Connect the app in Heliyos first.
+
+  WorkerTriggerCatalogEntry:
+    type: object
+    additionalProperties: true
+    description: One trigger a worker can be set to run on.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        nullable: true
+        description: "`null` for the triggers every workspace has. A workspace's own entry carries its id."
+      name:
+        type: string
+        description: >-
+          The trigger's name. For a `kind` `event` entry, this is the event name you put in a trigger's
+          `events`, for example `deal.updated`.
+      kind:
+        type: string
+        enum: [event, mention, schedule]
+        description: |
+          How the entry maps to a trigger on **Create a worker** and **Update a worker**:
+          - `event`: add `name` to the `events` of a trigger with `type` `event`.
+          - `mention`: a trigger with `type` `mention`. Every active worker answers mentions anyway.
+          - `schedule`: a trigger with `type` `scheduled` and a cron or one-time `at` in `match`.
+      label:
+        type: string
+        description: A short name for the trigger, as the Heliyos app shows it.
+      description:
+        type: string
+        description: When the trigger fires, in a sentence.
+      objectType:
+        type: string
+        nullable: true
+        description: >-
+          What the event is about: `interaction` (an email or meeting), `task`, `company`, `people`,
+          `deals`, `note`, `baseschema` (an object's fields), `review`, `scout` or `signal`. `null` for
+          `mention` and `schedule`.
+      source:
+        type: string
+        description: >-
+          Where the event comes from. `platform`: a change made in Heliyos, by a person, the API or a
+          worker. `internal`: Heliyos's own background work, such as inbox sync or research. Any other
+          value names the service that delivers the event. Informational: read `integration` to know
+          whether a connected app is needed.
+      provider:
+        type: string
+        description: A key for the app that delivers the event. Present on entries that have `integration`.
+      providerRef:
+        type: string
+        description: The app's own name for the event, on entries that come from a connected app.
+      selectsAttributes:
+        type: boolean
+        description: >-
+          `true` on `company.attribute_updated`, `people.attribute_updated` and `deal.attribute_updated`:
+          in the Heliyos app you pick the fields to watch. The API stores only the `match` keys listed on
+          **Create a worker**, so such a subscription created through the API runs when any field of
+          that object changes.
+      isActive:
+        type: boolean
+        description: Absent or `true`. Inactive entries are not listed.
+      integration: { $ref: "#/components/schemas/WorkerIntegrationLink" }
+      createdAt: { $ref: "#/components/schemas/Timestamp" }
+      updatedAt: { $ref: "#/components/schemas/Timestamp" }
+
+  WorkerAction:
+    type: object
+    additionalProperties: true
+    description: >-
+      One action a worker can take. The API calls actions tools: `toolNames` and `actionIds` on a
+      worker hold them.
+    properties:
+      name:
+        type: string
+        description: >-
+          The action's stable snake_case name, for example `create_task` or `send_email`. For a
+          `builtin` action, this is the value you put in a worker's `toolNames`.
+      label:
+        type: string
+        description: A short, readable name, as a run's activity shows it (for example `Created task`).
+      display_name:
+        type: string
+        nullable: true
+        description: "`action` only: the action's name as the connected app's set of actions defines it, for example `Send Email`. `null` for `builtin`."
+      description:
+        type: string
+        description: What the action does, as the worker reads it when deciding whether to use it. Can be long.
+      source:
+        type: string
+        enum: [builtin, action]
+        description: |
+          - `builtin`: one of Heliyos's own actions (reading and writing records, tasks and notes, web
+            research, files, charts, follow-ups). Put `name` in the worker's `toolNames`.
+          - `action`: an action of your workspace, performed by a connected app (email, calendar, file
+            storage and so on). Put `action_id` in the worker's `actionIds`.
+      is_internal:
+        type: boolean
+        description: "`true` for `builtin`, `false` for `action`."
+      action_id:
+        type: string
+        nullable: true
+        description: "`action` only: the action's id, the value for `actionIds`. `null` for `builtin`."
+      provider:
+        type: string
+        nullable: true
+        description: "`action` only: a key for the app that performs it. Read `integration` for the app's name and status. `null` for `builtin`."
+      integration: { $ref: "#/components/schemas/WorkerIntegrationLink" }
+      risk:
+        type: string
+        enum: [read, write_crm, write_deal, communicate, schedule_meeting, external, schedule, plan, confirm]
+        description: |
+          What kind of action it is, which decides whether a call waits for a person's review:
+          - `read`: reads only. Never waits.
+          - `write_crm`: writes companies, people, tasks, notes, documents, email drafts and thread or
+            meeting analysis. Applies directly, never waits. A saved email draft then waits for review
+            before it is sent.
+          - `write_deal`: creates or changes a deal. Waits unless autopilot approves deal changes.
+          - `communicate`: sends email. Waits unless autopilot sends email.
+          - `schedule_meeting`: books, moves or cancels a meeting. Waits unless autopilot schedules meetings.
+          - `external`: changes something in a connected app. Waits unless autopilot allows external
+            actions (off by default).
+          - `schedule`: schedules or cancels a follow-up run. Runs unless autopilot follow-ups are turned off (on by default).
+          - `plan`: submits a plan. Waits only when the workspace requires plan approval.
+          - `confirm`: asks a person a question or for approval. Always waits.
+
+          Even with autopilot on for a kind of action, a call waits when the worker's stated confidence
+          is below the threshold set for it (80 by default) or when it states none.
+      review_type:
+        type: string
+        description: >-
+          The kind of review a call raises when it waits, for example `email_draft`, `deal_update` or
+          `meeting_scheduled`. Defaults to the action's `name`.
+      common:
+        type: boolean
+        description: >-
+          `true`: every worker has this action, whatever its `toolNames` say. You do not need to
+          list it.
+      is_hidden:
+        type: boolean
+        description: >-
+          `true`: Heliyos wires this action in where it is needed. It is not offered for picking in the
+          Heliyos app; leave it out of a worker's configuration.
+      input:
+        type: object
+        additionalProperties: true
+        description: The JSON Schema of the action's input, as the worker fills it in.
+      output:
+        type: object
+        additionalProperties: true
+        description: The JSON Schema of the action's result.
+
+operations:
+  listAgents:
+    summary: List workers
+    description: |
+      Returns every worker in the workspace, default and custom, in one response: custom workers
+      first, then default ones, each group by name. A workspace has a handful, so the list is not paged.
+    response:
+      description: Every worker.
+      message: Successful request
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/Worker" }
+      example:
+        - _id: 6720f3a1b2c3d4e5f6a7b8c9
+          organizationId: 66a0f1e2d3c4b5a697887766
+          name: Account researcher
+          type: custom
+          isActive: true
+          icon: search
+          isExcluded: false
+          description: Researches a company before a first call and writes a brief on the record.
+          instructions: "When a meeting is booked with a new company, research it and add a note with..."
+          toolName: account_researcher
+          toolNames: [web_search]
+          actionIds: []
+          toolPolicy: { readOnly: false }
+          memory: { enabled: true }
+          resources: { scope: everything, allKbFiles: true, linkedKbFileIds: [], fileIds: [] }
+          triggers:
+            - { type: event, events: [meeting.booked], source: user }
+          runtime: sandbox
+          metadata:
+            created: { at: "2026-10-12T14:00:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+            updated: { at: "2026-11-01T09:20:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          createdAt: "2026-10-12T14:00:00.000Z"
+          updatedAt: "2026-11-01T09:20:00.000Z"
+
+  getAgent:
+    summary: Get a worker
+    description: Returns one worker with its full instructions, tools, files and triggers.
+    parameters:
+      id:
+        description: The worker's id.
+        example: 6720f3a1b2c3d4e5f6a7b8c9
+    response:
+      description: The worker.
+      message: Successful request
+      data: { $ref: "#/components/schemas/Worker" }
+      example:
+        _id: 6720f3a1b2c3d4e5f6a7b8c9
+        organizationId: 66a0f1e2d3c4b5a697887766
+        name: Account researcher
+        type: custom
+        isActive: true
+        icon: search
+        isExcluded: false
+        description: Researches a company before a first call and writes a brief on the record.
+        instructions: "When a meeting is booked with a new company, research it and add a note with its products, recent news and likely priorities."
+        toolName: account_researcher
+        toolNames: [web_search]
+        actionIds: []
+        toolPolicy: { readOnly: false }
+        memory: { enabled: true }
+        resources: { scope: everything, allKbFiles: true, linkedKbFileIds: [], fileIds: [] }
+        triggers:
+          - { type: event, events: [meeting.booked], source: user }
+          - type: scheduled
+            match: { schedule: "0 8 * * 1", timezone: Europe/Berlin }
+            dependencies: []
+            source: user
+        runtime: sandbox
+        metadata:
+          created: { at: "2026-10-12T14:00:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-01T09:20:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+        createdAt: "2026-10-12T14:00:00.000Z"
+        updatedAt: "2026-11-01T09:20:00.000Z"
+    errors:
+      "404": "NOT_FOUND: no worker with this id in the workspace."
+
+  createAgent:
+    summary: Create a worker
+    description: |
+      Creates a custom worker. It starts active unless you send `isActive: false`, and its triggers
+      take effect at once.
+
+      What you leave out gets a default: empty instructions, no tools or actions, memory on, and every
+      knowledge base file linked. `toolName` is made from the name (lowercase, other characters as `_`,
+      at most 48 characters) unless you send one. Scheduled triggers are registered after the save;
+      `scheduleSync` in the response says whether each one is in place.
+
+      Creating a worker is free. Its runs are not: each call to a custom worker during a run spends
+      credits (feature `worker_run` in **List credit usage**).
+
+      Needs a workspace owner or admin. An API key counts as an admin.
+    requestBody:
+      schema:
+        type: object
+        required: [name]
+        properties:
+          name:
+            type: string
+            description: The worker's name, 1 to 200 characters after trimming. Unique in the workspace.
+            example: Account researcher
+          description:
+            type: string
+            description: One line on what the worker is for, up to 2,000 characters. Heliyos reads it to decide when to call the worker.
+            example: Researches a company before a first call and writes a brief on the record.
+          icon:
+            type: string
+            description: An icon name for the Heliyos app, up to 100 characters.
+            example: search
+          instructions:
+            type: string
+            description: What the worker does and how, in Markdown, up to 50,000 characters. Defaults to empty.
+            example: When a meeting is booked with a new company, research it and add a note with its products, recent news and likely priorities.
+          isActive:
+            type: boolean
+            description: "`false` creates the worker paused. Defaults to `true`."
+          toolName:
+            type: string
+            description: The snake_case name Heliyos calls the worker by, 1 to 48 characters of `a-z`, `0-9` and `_`. Defaults to one made from `name`. Cannot be changed later.
+            example: account_researcher
+          toolNames:
+            type: array
+            description: Built-in tools the worker may use, by name. Up to 500. Defaults to none.
+            items: { type: string, maxLength: 200 }
+          actionIds:
+            type: array
+            description: Workspace actions the worker may run. Each must be an action of this workspace. Up to 500.
+            items: { $ref: "#/components/schemas/ObjectId" }
+          toolPolicy:
+            type: object
+            description: "`{ readOnly }`: `true` lets the worker read but never change data."
+            properties:
+              readOnly: { type: boolean, description: "`true`: read only." }
+          memory:
+            type: object
+            description: "`{ enabled }`: whether the worker keeps memory across runs. Defaults to on."
+            properties:
+              enabled: { type: boolean, description: Memory on or off. }
+          resources:
+            allOf: [{ $ref: "#/components/schemas/WorkerResources" }]
+            description: The files the worker reads. Merged over the defaults (`scope` `everything`, every knowledge base file).
+          triggers:
+            type: array
+            maxItems: 50
+            description: What starts the worker, up to 50 entries. Defaults to none.
+            items: { $ref: "#/components/schemas/WorkerTriggerInput" }
+          schedule:
+            type: object
+            description: Legacy. Up to 20 cron expressions in `cron`. Use a `scheduled` trigger instead.
+            properties:
+              cron:
+                type: array
+                maxItems: 20
+                items: { type: string, maxLength: 100 }
+                description: 5-field cron expressions.
+      example:
+        name: Account researcher
+        description: Researches a company before a first call and writes a brief on the record.
+        instructions: When a meeting is booked with a new company, research it and add a note with its products, recent news and likely priorities.
+        toolPolicy: { readOnly: false }
+        triggers:
+          - { type: event, events: [meeting.booked] }
+          - type: scheduled
+            match: { schedule: "0 8 * * 1", timezone: Europe/Berlin }
+    response:
+      status: 201
+      description: The created worker, with the outcome of its schedule registration.
+      message: Agent created.
+      data: { $ref: "#/components/schemas/WorkerSaved" }
+      example:
+        _id: 6720f3a1b2c3d4e5f6a7b8c9
+        organizationId: 66a0f1e2d3c4b5a697887766
+        name: Account researcher
+        type: custom
+        isActive: true
+        isExcluded: false
+        description: Researches a company before a first call and writes a brief on the record.
+        instructions: When a meeting is booked with a new company, research it and add a note with its products, recent news and likely priorities.
+        toolName: account_researcher
+        toolNames: []
+        actionIds: []
+        toolPolicy: { readOnly: false }
+        memory: { enabled: true }
+        resources: { scope: everything, allKbFiles: true, linkedKbFileIds: [], fileIds: [] }
+        triggers:
+          - { type: event, events: [meeting.booked], source: user }
+          - type: scheduled
+            events: []
+            match: { schedule: "0 8 * * 1", timezone: Europe/Berlin }
+            dependencies: []
+            source: user
+        runtime: sandbox
+        metadata:
+          created: { at: "2026-11-05T10:00:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-05T10:00:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+        createdAt: "2026-11-05T10:00:00.000Z"
+        updatedAt: "2026-11-05T10:00:00.000Z"
+        scheduleSync: { created: [6729c0d1e2f3a4b5c6d7e8f9], deleted: [], failed: [] }
+    errors:
+      "404": "NOT_FOUND: an action, file or dependency worker id is not this workspace's. Nothing is written."
+      "409": "CONFLICT: a worker with this name already exists. Nothing is written."
+
+  updateAgent:
+    summary: Update a worker
+    description: |
+      Changes a worker. Send at least one field; what you leave out is kept.
+
+      - On a custom worker you can change `name`, `description`, `icon`, `instructions`, `isActive`,
+        `toolNames`, `actionIds`, `toolPolicy`, `memory`, `resources`, `triggers` and `schedule`.
+      - On a default worker only `description`, `icon`, `instructions`, `isActive`, `memory` and
+        `triggers` apply. Other fields are accepted and ignored.
+      - `toolName` is accepted and ignored on every worker: it never changes after create.
+
+      `triggers`, when sent, replaces the worker's own triggers. On a default worker its built-in
+      (`source` `default`) triggers always stay: your list replaces only the ones added by people, and
+      events or trigger types the built-in ones already cover are dropped. Send `[]` to remove every
+      trigger you added.
+
+      `resources`, `toolPolicy` and `memory` are replaced as a whole when sent. Set `isActive: false` to
+      pause a worker instead of deleting it. Needs a workspace owner or admin.
+    parameters:
+      id:
+        description: The worker's id.
+        example: 6720f3a1b2c3d4e5f6a7b8c9
+    requestBody:
+      schema:
+        type: object
+        minProperties: 1
+        properties:
+          name:
+            type: string
+            description: A new name, 1 to 200 characters after trimming, unique in the workspace. Custom workers only.
+          description:
+            type: string
+            description: A new one-line description, up to 2,000 characters.
+          icon:
+            type: string
+            description: A new icon name, up to 100 characters.
+          instructions:
+            type: string
+            description: New instructions in Markdown, up to 50,000 characters. Replaces the current ones.
+          isActive:
+            type: boolean
+            description: "`false` pauses the worker, `true` resumes it."
+          toolName:
+            type: string
+            description: Accepted and ignored. A worker's `toolName` is fixed at create.
+          toolNames:
+            type: array
+            description: The complete list of built-in tools, up to 500. Replaces the current list. Custom workers only.
+            items: { type: string, maxLength: 200 }
+          actionIds:
+            type: array
+            description: The complete list of workspace actions, up to 500. Replaces the current list. Custom workers only.
+            items: { $ref: "#/components/schemas/ObjectId" }
+          toolPolicy:
+            type: object
+            description: "`{ readOnly }`. Replaces the current policy. Custom workers only."
+            properties:
+              readOnly: { type: boolean, description: "`true`: read only." }
+          memory:
+            type: object
+            description: "`{ enabled }`. Replaces the current memory setting."
+            properties:
+              enabled: { type: boolean, description: Memory on or off. }
+          resources:
+            allOf: [{ $ref: "#/components/schemas/WorkerResources" }]
+            description: The worker's files. Replaces the current setting as a whole. Custom workers only.
+          triggers:
+            type: array
+            maxItems: 50
+            description: The complete list of triggers you want, up to 50. Replaces the current ones (a default worker keeps its built-in ones).
+            items: { $ref: "#/components/schemas/WorkerTriggerInput" }
+          schedule:
+            type: object
+            description: Legacy cron list. Replaces the current one. Custom workers only. Use a `scheduled` trigger instead.
+            properties:
+              cron:
+                type: array
+                maxItems: 20
+                items: { type: string, maxLength: 100 }
+                description: 5-field cron expressions.
+      example:
+        isActive: false
+    response:
+      description: The updated worker, with the outcome of its schedule registration.
+      message: Agent updated.
+      data: { $ref: "#/components/schemas/WorkerSaved" }
+      example:
+        _id: 6720f3a1b2c3d4e5f6a7b8c9
+        name: Account researcher
+        type: custom
+        isActive: false
+        toolName: account_researcher
+        triggers:
+          - { type: event, events: [meeting.booked], source: user }
+        scheduleSync: { created: [], deleted: [], failed: [] }
+    errors:
+      "404": "NOT_FOUND: no worker with this id, or a new action, file or dependency worker id is not this workspace's. Nothing is written."
+      "409": "CONFLICT: another worker already has this name. Nothing is written."
+
+  deleteAgent:
+    summary: Delete a worker
+    description: |
+      Deletes a custom worker permanently and removes its schedules. Its past runs and their history
+      are kept. Default workers cannot be deleted: pause them with `isActive: false` instead.
+
+      Other workers that list this one in a trigger's `dependencies` keep the id. Needs a workspace
+      owner or admin.
+    parameters:
+      id:
+        description: The custom worker's id.
+        example: 6720f3a1b2c3d4e5f6a7b8c9
+    response:
+      description: The worker was deleted.
+      message: Agent deleted.
+      data:
+        type: object
+        properties:
+          deleted:
+            type: boolean
+            description: Always `true`.
+      example: { deleted: true }
+    errors:
+      "400": "The worker is a default worker, which cannot be deleted (message \"Default agents cannot be deleted.\"). Nothing is changed."
+      "404": "NOT_FOUND: no worker with this id in the workspace."
+    content: |
+      <Warning>
+      Deleting a worker cannot be undone. Its instructions, triggers and settings are gone, and its
+      schedules stop. To stop a worker for now, update it with `isActive: false`.
+      </Warning>
+
+  createOrchestratorChat:
+    sidebarTitle: Ask Heliyos
+    summary: Ask Heliyos
+    description: |
+      Sends a message to Heliyos, the same as typing it into Ask Heliyos in the app. Heliyos reads the
+      workspace, plans, and calls workers to do the work. It can answer a question ("summarise what
+      changed with Contoso this week") or carry out a job ("draft a follow-up to the Fabrikam thread").
+
+      **What it returns.** The call starts a run and answers with `runId`, `status` and `threadId`.
+      With `wait` above 0 it holds the request for up to that many seconds until the run settles:
+      finishes, or stops to wait on a person or a schedule. If the run completes in time, `output`
+      carries the reply. Otherwise follow the run:
+
+      1. Call **Get a run** with the `runId` and `wait=30`. Repeat while
+         `status` is `queued` or `running`.
+      2. When `status` is `completed`, read `output.response`. On `failed`, read `error` with
+         `include=detail`.
+      3. When `status` is `awaiting_approval`, `paused`, `waiting` or `scheduled`, polling will not
+         move it. A person has to act in Heliyos (Review), or the scheduled time has to come.
+
+      **List runs** with `threadId` returns every run of a conversation.
+
+      **Conversations.** Leave `threadId` out to start a new conversation; Heliyos returns its id.
+      Send it back to continue. If the thread's run is still open, your message joins that run instead
+      of starting another: it is queued while the run works, read after the decision while it waits
+      for a review, and resumes it when it is paused.
+
+      **Reviews.** Consequential actions, such as sending an email or changing a deal, wait for a
+      person's approval unless the workspace's autopilot allows them. The run then shows
+      `awaiting_approval` and lists the reviews in `reviews`.
+
+      **Credits.** Each call to a custom worker during the run spends credits once the call finishes.
+      Default workers and Heliyos's own reasoning are free. Tools the run uses can spend credits too,
+      for example company enrichment. The run's total is in `usage.credits` on **Get a run**, and each
+      charge is in **List credit usage** under `worker_run`.
+
+      **Timeouts.** `wait` is at most 90 seconds; set your HTTP client's timeout above it (120 seconds
+      is safe). A run has no fixed time limit and keeps working after the call returns. If you
+      disconnect early, the run is not affected.
+
+      Every call starts or continues work: calling twice with the same message runs it twice.
+    requestBody:
+      schema:
+        type: object
+        required: [message]
+        properties:
+          message:
+            type: string
+            description: The question or instruction, in plain language. 1 to 20,000 characters after trimming.
+            example: Summarise what changed with Contoso this week and list open risks.
+          threadId:
+            type: string
+            description: >-
+              The `threadId` from an earlier answer, to continue that conversation. 1 to 100 characters
+              of letters, digits and `_ . : @ = + -`. Leave it out to start a new conversation. An id
+              Heliyos has not seen starts a new conversation under that id.
+            example: 3fa9c2d17b4e
+          attachments:
+            type: array
+            maxItems: 20
+            description: >-
+              Ids of files you already uploaded, up to 20. Heliyos and its workers can read them during
+              the run. Each must be a file of this workspace.
+            items: { $ref: "#/components/schemas/ObjectId" }
+          wait:
+            type: integer
+            minimum: 0
+            maximum: 90
+            default: 0
+            description: >-
+              Seconds to hold the request while the run works, 0 to 90. 0 (the default) answers at once.
+              The call returns as soon as the run finishes or waits on a person or a schedule.
+            example: 60
+      examples:
+        ask:
+          summary: Ask and wait for the answer
+          value:
+            message: Summarise what changed with Contoso this week and list open risks.
+            wait: 60
+        followUp:
+          summary: Follow up in the same conversation
+          value:
+            message: Draft a follow-up email to their champion about the security review.
+            threadId: 3fa9c2d17b4e
+    response:
+      description: The run handling the message, and its reply when it finished within `wait`.
+      message: Successful request
+      data: { $ref: "#/components/schemas/AskHeliyosResult" }
+      example:
+        runId: 9f2c4e7a1b3d4f6a8c0e2b4d6f8a0c1e
+        status: completed
+        threadId: 3fa9c2d17b4e
+        output:
+          final_response_by: Heliyos
+          response: "Contoso moved to Negotiation on Tuesday. Two risks: procurement wants a security review, and the champion is out until Nov 12."
+    errors:
+      "404": "NOT_FOUND: an attachments id is not a file of this workspace. Nothing runs."
+    content: |
+      <Warning>
+      Ask Heliyos acts on your workspace. Depending on the request it can create and change records and
+      tasks, draft and send email, and spend credits. Consequential actions wait for approval in
+      Heliyos unless your autopilot settings allow them. Calling it twice starts the work twice.
+      </Warning>
+
+  listWorkerRuns:
+    summary: List runs
+    description: |
+      Returns the workspace's runs, newest first: Ask Heliyos conversations, worker chats, task runs,
+      and runs started by events and schedules. Read one run's steps with
+      **Get a run**, using its `orchestratorRunId`.
+
+      By default the list pages with a cursor: pass `limit`, then send `meta.pagination.next_cursor`
+      back as `cursor`. Sending `page`, `offset` or `skip`, or a sort other than newest first, switches to
+      offset paging: `meta.pagination` then has `limit`, `offset`, `total` and `hasMore`, and there is no
+      cursor. See [Pagination](/api-reference/pagination).
+
+      Filters combine with AND.
+    parameters:
+      limit:
+        description: Runs per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. Only valid with the default order (newest first).
+      page:
+        description: A page number, starting at 1, for offset paging. Pages are `limit` runs long.
+      offset:
+        description: Runs to skip, for offset paging. Wins over `page`.
+      skip:
+        description: Same as `offset`.
+      search:
+        description: >-
+          Case-insensitive text matched against the run id, title, the message that started it, worker
+          names, the triggering event name and the final reply. Up to 500 characters.
+        example: Contoso
+      status:
+        description: >-
+          Only runs in this status, exact match: `queued`, `running`, `awaiting_approval`, `paused`,
+          `waiting`, `scheduled`, `completed`, `failed`, `skipped`, `cancelled` or `stopped`.
+        example: awaiting_approval
+      surface:
+        description: >-
+          Only runs that started here: `chat` (Ask Heliyos), `worker_chat` (a chat with one worker),
+          `task_chat` (a chat on a task), `background` (events, schedules and tasks) or `worker_direct`.
+        example: chat
+      taskId:
+        description: Only runs on this task, including chats that mention it.
+        example: 6721a0b1c2d3e4f5a6b7c8d9
+      threadId:
+        description: Only runs of this conversation (the `threadId` from Ask Heliyos).
+        example: 3fa9c2d17b4e
+      interactionId:
+        description: Only runs about this email thread or meeting, or started by it.
+        example: 6721a3c4d5e6f7a8b9c0d1e2
+      companyId:
+        description: Only runs about this company record, or started by it.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+      personId:
+        description: Only runs about this person record, or started by it.
+        example: 66f1a8c3e4b0a1b2c3d4e5f7
+      runtime:
+        description: >-
+          `sandbox` or `light`. Runs started through workers are `sandbox`. `light` runs come from an
+          older pipeline that is hidden unless you also send its `surface`.
+      agentId:
+        description: Only runs this worker took part in, was considered for, or focused on.
+        example: 6720f3a1b2c3d4e5f6a7b8c9
+      from:
+        description: Only runs created at or after this ISO 8601 date-time.
+        example: "2026-11-01T00:00:00Z"
+      to:
+        description: Only runs created at or before this ISO 8601 date-time.
+        example: "2026-11-05T23:59:59.999Z"
+      triggerType:
+        description: >-
+          Comma-separated trigger kinds: only runs set off by one of them, for example `event,mention`.
+          Kinds include `chat`, `event`, `webhook`, `mention`, `task_created` and `scheduled`.
+        example: event,scheduled
+      interactionIds:
+        description: Comma-separated email thread or meeting ids. Only runs about any of them, or started by one.
+      sortBy:
+        description: "Sort field: `createdAt` (default), `updatedAt`, `status`, `title` or `surface`. Anything but `createdAt` switches to offset paging."
+      sortOrder:
+        description: "`desc` (default) or `asc`. `asc` switches to offset paging."
+      view:
+        description: >-
+          `run` (default) returns runs as described here. `timeline` returns each run flattened into
+          the run-and-steps shape the Heliyos inbox renders; that shape is for the app and may change.
+    response:
+      description: A page of runs.
+      message: Successful request
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/WorkerRunListItem" }
+      example:
+        - _id: 6729d1e2f3a4b5c6d7e8f9a0
+          orchestratorRunId: 9f2c4e7a1b3d4f6a8c0e2b4d6f8a0c1e
+          organizationId: 66a0f1e2d3c4b5a697887766
+          status: completed
+          title: Contoso weekly summary
+          surface: chat
+          runtime: sandbox
+          userInput: Summarise what changed with Contoso this week and list open risks.
+          triggerRef: { type: chat }
+          relationships:
+            - { objectId: 66f1a8c3e4b0a1b2c3d4e5f6, objectType: company }
+          threadId: 3fa9c2d17b4e
+          userId: 66a0f1e2d3c4b5a697881111
+          workers:
+            - { agentId: 6720f3a1b2c3d4e5f6a7b8c9, agentName: Account researcher, nodeId: w1, status: completed }
+          toolCalls: 6
+          finalOutput:
+            final_response_by: Heliyos
+            response: Contoso moved to Negotiation on Tuesday.
+          usage: { credits: 5, requests: 9, inputTokens: 48210, outputTokens: 1630, totalTokens: 49840 }
+          createdAt: "2026-11-05T10:12:02.000Z"
+          updatedAt: "2026-11-05T10:12:41.000Z"
+          completedAt: "2026-11-05T10:12:41.000Z"
+    errors:
+      "400": "VALIDATION_FAILED: for example a cursor sent with a sort other than newest first."
+
+  getWorkerRun:
+    summary: Get a run
+    description: |
+      Returns one run: its status, what set it off, every step with a one-line summary, the reviews it
+      raised, its credit and model usage, and its final reply once it has one.
+
+      Send `wait` to long-poll: the call holds for up to that many seconds while the run is `queued` or
+      `running`, and returns as soon as it finishes or starts waiting on a person or a schedule. A run
+      that is already in one of those states returns at once.
+
+      `include=detail` adds the title, error, the workers that took part and the tool-call count.
+      `include=step_payloads` adds each step's raw input, output and error, and the execution graph;
+      these can be large.
+    parameters:
+      id:
+        description: The run id (`runId` from Ask Heliyos, or `orchestratorRunId` from **List runs**).
+        example: 9f2c4e7a1b3d4f6a8c0e2b4d6f8a0c1e
+      wait:
+        description: Seconds to wait for the run to finish or stop on a person, 0 to 30. Defaults to 0 (answer at once).
+        example: 30
+      include:
+        description: "Comma-separated extras: `detail`, `step_payloads`, or both (`detail,step_payloads`)."
+        example: detail
+    response:
+      description: The run.
+      message: Successful request
+      data: { $ref: "#/components/schemas/WorkerRun" }
+      example:
+        id: 9f2c4e7a1b3d4f6a8c0e2b4d6f8a0c1e
+        status: awaiting_approval
+        trigger: { type: chat }
+        startedAt: "2026-11-05T10:12:02.000Z"
+        endedAt: null
+        threadId: 3fa9c2d17b4e
+        taskId: null
+        steps:
+          - seq: 1
+            type: worker
+            title: Account researcher
+            status: completed
+            startedAt: "2026-11-05T10:12:05.000Z"
+            endedAt: "2026-11-05T10:12:31.000Z"
+            summary: Contoso moved to Negotiation on Tuesday. Procurement asked for a security review.
+          - seq: 2
+            type: approval
+            title: send_email
+            status: pending
+            startedAt: "2026-11-05T10:12:38.000Z"
+            endedAt: null
+            summary: null
+        reviews:
+          - { id: 6729d2f0a1b2c3d4e5f6a7b8, status: PENDING, type: email_draft }
+        usage: { credits: 5, requests: 7, inputTokens: 40120, outputTokens: 1210, totalTokens: 41330 }
+        title: Contoso follow-up
+        agentName: Heliyos
+        surface: chat
+        error: null
+        workers:
+          - { nodeId: w1, agentId: 6720f3a1b2c3d4e5f6a7b8c9, agentName: Account researcher, status: completed }
+        toolCalls: 4
+        createdAt: "2026-11-05T10:12:02.000Z"
+    errors:
+      "404": "NOT_FOUND: no run with this id in the workspace."
+
+  listWorkerTriggers:
+    summary: List triggers
+    description: |
+      Returns the catalogue of triggers a worker can be set to run on: the events it can subscribe
+      to, mentions and schedules. Use it to fill `triggers` on **Create a worker** and **Update a
+      worker**. The whole catalogue comes back in one response; it is not paged.
+
+      Every workspace has the same shared triggers. A workspace can also have entries of its own,
+      listed after the shared ones; an own entry with the same `name` as a shared one replaces it.
+
+      **From catalogue entry to worker trigger.**
+
+      | Catalogue entry | Trigger object on the worker |
+      | --- | --- |
+      | `kind` `event`, for example `deal.updated` | `{ "type": "event", "events": ["deal.updated"] }`. One trigger can list several event names; `"*"` means every event. |
+      | `kind` `mention` (`mention`) | `{ "type": "mention" }`. Every active worker answers mentions, with or without it. |
+      | `kind` `schedule` (`schedule`) | `{ "type": "scheduled", "match": { "schedule": "0 8 * * 1-5", "timezone": "Europe/Berlin" } }` for a repeating 5-field cron, or `match.at` (`YYYY-MM-DDTHH:MM:SS` local time) with `match.timezone` for one run. |
+      | Not in the catalogue | `{ "type": "task_created" }` runs on every new task; `match.taskType` limits it to some task types. |
+
+      **Things to know.**
+      - The API does not check event names against this catalogue when you save a worker. A name
+        that is not in it never fires.
+      - Triggers with an `integration` only fire while that app is connected (`integration.connected`).
+      - `company.attribute_updated`, `people.attribute_updated` and `deal.attribute_updated` watch
+        fields picked in the Heliyos app. Created through the API, they run on a change to any field
+        of that object.
+      - A trigger with `type` `scheduled` is registered when you save the worker; check
+        `scheduleSync` in that response.
+    response:
+      description: Every trigger in the catalogue.
+      message: Successful request
+      data:
+        type: object
+        properties:
+          triggers:
+            type: array
+            description: The shared triggers by name, then the workspace's own by name.
+            items: { $ref: "#/components/schemas/WorkerTriggerCatalogEntry" }
+      example:
+        triggers:
+          - _id: 6710a1b2c3d4e5f6a7b8c901
+            organizationId: null
+            name: deal.attribute_updated
+            kind: event
+            label: Deal attribute changed
+            description: Chosen deal fields changed. Pick the pipeline (schema) and the attributes to watch.
+            objectType: deals
+            source: platform
+            selectsAttributes: true
+            createdAt: "2026-09-01T08:00:00.000Z"
+            updatedAt: "2026-11-01T08:00:00.000Z"
+          - _id: 6710a1b2c3d4e5f6a7b8c902
+            organizationId: null
+            name: mention
+            kind: mention
+            label: "@mention"
+            description: A person mentioned the worker in a comment or note.
+            objectType: null
+            source: platform
+            createdAt: "2026-09-01T08:00:00.000Z"
+            updatedAt: "2026-11-01T08:00:00.000Z"
+          - _id: 6710a1b2c3d4e5f6a7b8c903
+            organizationId: null
+            name: schedule
+            kind: schedule
+            label: Schedule
+            description: Runs once at a date and time, or on a repeating schedule you configure on the worker.
+            objectType: null
+            source: internal
+            createdAt: "2026-09-01T08:00:00.000Z"
+            updatedAt: "2026-11-01T08:00:00.000Z"
+          - _id: 6710a1b2c3d4e5f6a7b8c904
+            organizationId: null
+            name: task.created
+            kind: event
+            label: Task created
+            description: A task was created.
+            objectType: task
+            source: platform
+            createdAt: "2026-09-01T08:00:00.000Z"
+            updatedAt: "2026-11-01T08:00:00.000Z"
+          - _id: 6710a1b2c3d4e5f6a7b8c905
+            organizationId: null
+            name: typeform.response
+            kind: event
+            label: Typeform response
+            description: A form was submitted. The answers the form maps are already saved to the company, person and, when the form creates deals, the deal. Your own instructions say what to do with them.
+            objectType: company
+            source: typeform
+            provider: typeform
+            providerRef: TYPEFORM_NEW_RESPONSE
+            integration: { title: Typeform, iconSrc: "https://cdn.example.com/icons/typeform.svg", connected: false }
+            createdAt: "2026-09-01T08:00:00.000Z"
+            updatedAt: "2026-11-01T08:00:00.000Z"
+    errors:
+      "403": "FORBIDDEN_ACTION: you cannot view workers."
+
+  listWorkerTools:
+    summary: List actions
+    description: |
+      Returns every action a worker in this workspace can take. The API calls them tools. Use it to
+      fill `toolNames` and `actionIds` on **Create a worker** and **Update a worker**. The whole list
+      comes back in one response; it is not paged.
+
+      **Two sources.**
+      - `builtin`: Heliyos's own actions, the same in every workspace. Put the `name` in the worker's
+        `toolNames`.
+      - `action`: your workspace's actions, performed by a connected app, such as sending email or
+        booking meetings through the connected mailbox, or working with files in connected storage.
+        Put the `action_id` in the worker's `actionIds`.
+
+      **What a worker gets.** A worker can use every action with `common: true`, plus the `builtin`
+      actions named in `toolNames` and the actions in `actionIds`. A name in `toolNames` that is not
+      in this list is saved but ignored when the worker runs. Each id in `actionIds` must be an action
+      of this workspace (404 otherwise). Leave out actions with `is_hidden: true`.
+
+      **Connected apps.** An action with an `integration` needs that app connected to work.
+      `integration.connected` says whether it is connected now; the action is listed either way.
+
+      **Reviews.** `risk` decides whether a call waits for a person: reads and writes to companies,
+      people, tasks and notes apply directly; deal changes, sending email, meetings and changes in
+      connected apps wait for review unless the workspace's autopilot settings allow them, and even
+      then a call below the confidence threshold waits. `send_email` is only available to workers
+      while the workspace sends email automatically; otherwise workers draft with
+      `create_email_draft` and the draft waits for review, where approving it sends it.
+
+      `input` holds each action's full JSON Schema, so the response can be large.
+    response:
+      description: Every action a worker can take.
+      message: Successful request
+      data:
+        type: object
+        properties:
+          tools:
+            type: array
+            description: Heliyos's own actions first, then the workspace's.
+            items: { $ref: "#/components/schemas/WorkerAction" }
+      example:
+        tools:
+          - name: create_task
+            label: Created task
+            display_name: null
+            description: Create a follow-up task for the organization, linked to the company, people and deal.
+            source: builtin
+            is_internal: true
+            action_id: null
+            provider: null
+            risk: write_crm
+            review_type: task
+            common: false
+            is_hidden: false
+            input:
+              type: object
+              properties:
+                title: { type: string, description: "Short imperative title, e.g. 'Send revised quote to Contoso'", minLength: 2, maxLength: 200 }
+                priority: { type: string, enum: [low, medium, high, urgent, none], default: medium }
+              required: [title]
+            output:
+              type: object
+              properties:
+                ok: { type: boolean, default: true, description: Whether the change was applied }
+                id: { type: string, nullable: true, description: Id of the record created or changed }
+          - name: web_search
+            label: Searched the web
+            display_name: null
+            description: Search the web and read pages to answer a question with sources.
+            source: builtin
+            is_internal: true
+            action_id: null
+            provider: null
+            risk: read
+            review_type: web_search
+            common: false
+            is_hidden: false
+            input: { type: object }
+            output: { type: object }
+          - name: schedule_meeting
+            label: Scheduled meeting
+            display_name: Schedule Meeting
+            description: "Put a meeting on the calendar and invite the guests: a one-time or a repeating event, timed or all day, with a video call link created with it unless it is in person."
+            source: action
+            is_internal: false
+            action_id: 6721b2c3d4e5f6a7b8c9d0e1
+            risk: schedule_meeting
+            review_type: meeting_scheduled
+            common: false
+            is_hidden: false
+            integration: { title: Gmail, iconSrc: "https://cdn.example.com/icons/gmail.svg", connected: true }
+            input: { type: object }
+            output: { type: object }
+    errors:
+      "403": "FORBIDDEN_ACTION: you cannot view workers."

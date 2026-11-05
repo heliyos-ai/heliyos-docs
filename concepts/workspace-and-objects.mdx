@@ -1,0 +1,53 @@
+---
+title: "Workspace and objects"
+description: "How a Heliyos workspace is organised: objects, their fields, and the records inside them."
+---
+
+## Workspace
+
+Everything in Heliyos belongs to one **workspace**: your team, its records, notes, tasks, Scouts, workers and settings. An API key is tied to one workspace, and every request reads and writes only that workspace. [Get the workspace](/api-reference/workspace/get-the-workspace) returns its name, plan, member count, record counts and Watchers in use.
+
+## Objects
+
+An **object** is a kind of record, with its own fields. Every workspace starts with three built-in objects:
+
+| Object | `objectType` | Holds |
+| --- | --- | --- |
+| Companies | `company` | Accounts you sell to. |
+| People | `people` | Contacts at those accounts. |
+| Deals | `deals` | Opportunities in your pipeline. |
+
+You can add **custom objects** for anything else you track, such as partners, projects or renewals. In the API, objects are called **base schemas**, which is why their endpoints live under `/v1/platform/base-schemas`.
+
+```text
+Workspace
+├── Company (object)      fields: company_name, website, ...
+│   ├── Northwind Traders (record)
+│   └── Contoso (record)
+├── People (object)       fields: people_name, email, ...
+├── Deals (object)        fields: deal_name, ...
+└── Partners (custom object)
+```
+
+You need an object's id to list or create its records. Call [List objects](/api-reference/schemas/list-objects) once and keep the ids: they do not change.
+
+## Fields
+
+Each object has **fields**. A field has a `name` (the key you use in record bodies, such as `company_name`), a `displayName` people see, and a `type`. Types include text, rich text, numbers, currency, ratings, checkboxes, dates and timestamps, single and multi select, URLs, emails, phone numbers, users, images and relationships to other objects. The [Create a field](/api-reference/schemas/create-a-field) page lists every type with the values it accepts.
+
+Fields can be **AI fields**: Heliyos fills them from a prompt you set on the field.
+
+<Warning>
+  Changing a field's key or type, or deleting a field, affects every record of that object. Read the notes on [Update a field](/api-reference/schemas/update-a-field) and [Delete a field](/api-reference/schemas/delete-a-field) before you change a field other systems depend on.
+</Warning>
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Records and fields" icon="/icons/objects.svg" href="/concepts/records-and-fields">
+    How to read and write field values on records.
+  </Card>
+  <Card title="Schemas reference" icon="/icons/api.svg" href="/api-reference/schemas/list-objects">
+    Every object and field endpoint.
+  </Card>
+</CardGroup>

@@ -1,0 +1,103 @@
+---
+title: "API reference"
+description: "Conventions shared by every endpoint: base URL, authentication, the response envelope, ids, paging and errors."
+keywords: ["Heliyos REST API", "API reference", "base URL", "response envelope"]
+---
+
+## Base URL
+
+```text
+https://api-prod.heliyos.ai
+```
+
+Workspace data lives under `/v1/platform`. Team members, roles and the knowledge base live under `/v1/auth`. Both take the same API key.
+
+## Version
+
+This reference documents **Heliyos API v1.0.0**. The major version is in every path (`/v1/`). New endpoints and new optional fields arrive without a new major version, and the [Changelog](/changelog) lists each change. The MCP server `@heliyos/mcp` v1.0.0 calls this version.
+
+## Authentication
+
+Send your workspace API key as a bearer token on every request. See [Authentication](/authentication).
+
+```bash
+-H "Authorization: Bearer $HELIYOS_API_KEY"
+```
+
+## Requests
+
+- Bodies are JSON. Send `Content-Type: application/json`.
+- Ids are 24-character hexadecimal strings, such as `66f1a8c3e4b0a1b2c3d4e5f6`.
+- Dates are ISO 8601 in UTC, such as `2026-11-04T09:30:00.000Z`.
+- Unknown body and query keys are dropped before the request is handled.
+- `PATCH` changes only the fields you send. Each endpoint says when a field replaces a whole list.
+
+## Responses
+
+Every success answers with the same envelope. `data` holds the resource or list. `meta.message` is a short human-readable summary. Lists add `meta.pagination`.
+
+```json
+{
+  "meta": {
+    "message": "Notes fetched successfully.",
+    "pagination": {
+      "limit": 20,
+      "next_cursor": "NjZmMWE4YzNlNGIwYTFiMmMzZDRlNWY2"
+    }
+  },
+  "data": [
+    {
+      "_id": "6720b1f4c2a9e3d1f0a4b5c6",
+      "title": "Pricing call follow-up"
+    }
+  ]
+}
+```
+
+A few deletes answer `204 No Content` with no body. Their pages say so.
+
+Errors use a separate envelope with a stable `error.code`. See [Errors](/api-reference/errors).
+
+## Paging, filtering and limits
+
+<CardGroup cols={3}>
+  <Card title="Pagination" icon="/icons/layers.svg" href="/api-reference/pagination">
+    Cursor paging by default, page numbers when you sort or group.
+  </Card>
+  <Card title="Filtering and sorting" icon="/icons/filter.svg" href="/api-reference/filtering">
+    The `filters` JSON object most lists accept.
+  </Card>
+  <Card title="Rate limits" icon="/icons/clock.svg" href="/api-reference/rate-limits">
+    60 requests a minute per key, with headers to pace yourself.
+  </Card>
+</CardGroup>
+
+## Groups
+
+| Group | What it covers |
+| --- | --- |
+| [Workspace](/api-reference/workspace/get-the-workspace) | The workspace and its credit usage. |
+| [Schemas](/api-reference/schemas/list-objects) | Objects (companies, people, deals, custom objects) and their fields. |
+| [Records](/api-reference/records/list-records) | The rows of an object: create, read, update, delete, look up, enrich. |
+| [Timeline](/api-reference/timeline/list-timeline-entries) | The AI-written timeline of a company, person or deal. |
+| [Activities](/api-reference/activities/list-record-events) | The change history of records and tasks: who changed what, and when. |
+| [Interactions](/api-reference/interactions/list-interactions) | Synced email threads and meetings. |
+| [Notes](/api-reference/notes/list-notes) | Free-text notes linked to records. |
+| [Tasks](/api-reference/tasks/list-tasks) | Tasks for people and workers, and running workers on them. |
+| [Workers and runs](/api-reference/workers-and-runs/list-workers) | Workers, their triggers and actions, Ask Heliyos, and the runs they produce. |
+| [Reviews](/api-reference/reviews/list-reviews) | Worker actions waiting for a person, and approving or rejecting them. |
+| [Scouts](/api-reference/scouts/list-workspace-scouts) and [Signals](/api-reference/signals/list-signals) | What Scouts watch for and the signals they find. |
+| [Watchlist](/api-reference/watchlist/get-watchlist-statistics) | Watchers on companies. |
+| [Knowledge base](/api-reference/knowledge-base/get-the-knowledge-base) | The business context, fixed texts and custom entries your workers read. |
+| [Files](/api-reference/files/list-files) | Knowledge base files and files attached to records. |
+| [Labels](/api-reference/labels/list-label-groups) | Label groups that classify email. |
+| [Team](/api-reference/team/list-team-members) | Members, invitations and roles. |
+| [Notification settings](/api-reference/notification-settings/get-notification-settings) | Who gets workspace email notifications. |
+
+<Note>
+  Every endpoint in this reference is also used by the [Heliyos MCP server](/mcp/overview); each page names the tools that call it.
+</Note>
+
+## OpenAPI
+
+The full OpenAPI 3.0 document behind this reference is at [`/api-reference/openapi.json`](/api-reference/openapi.json). Use it to generate a client or import the API into Postman or Insomnia.

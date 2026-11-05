@@ -1,0 +1,19 @@
+---
+title: "Install"
+description: "Add the Heliyos MCP server to Claude Code, Codex, Cursor or VS Code in a minute."
+keywords: ["install Heliyos MCP", "Claude Code MCP", "Codex MCP", "Cursor MCP", "VS Code MCP"]
+---
+
+import { InstallPicker } from "/snippets/mcp-clients.jsx";
+
+Every client runs the same command, `npx -y @heliyos/mcp`, with your key in the `HELIYOS_API_KEY` environment variable. Replace `YOUR_HELIYOS_API_KEY` in the snippets with your key.
+
+<Warning>
+  Config files that hold the key in plain text are as sensitive as the key. Keep them out of shared folders and repositories. Where a client can read the key from your environment or a secret store, prefer that.
+</Warning>
+
+<InstallPicker />
+
+## Check it works
+
+Ask your agent: *"Which Heliyos workspace am I connected to?"* It should call `heliyos_organization_get` and answer with your workspace's name. If it does not, see [Troubleshooting](/mcp/troubleshooting).

@@ -1,0 +1,260 @@
+tag:
+  name: Knowledge base
+  icon: /icons/app-knowledge.svg
+  order: 105
+  description: >-
+    What your workers know about the business: the business context, four fixed texts (products,
+    pain points, value proposition, qualification criteria) and any custom entries your team adds.
+    Workers read it on their next run. Files your workers read live under Files, with kind
+    `knowledge_base`.
+
+components:
+  KnowledgeEntry:
+    type: object
+    description: A custom knowledge entry, for facts the fixed texts do not cover, such as pricing or competitors.
+    properties:
+      label:
+        type: string
+        description: The entry's title, for example `Pricing`.
+        example: Pricing
+      content:
+        type: string
+        description: The entry's content, as plain text or HTML. The Heliyos app edits it as rich text.
+        example: Growth is $49 per seat per month, billed yearly. Annual contracts above 50 seats get 15% off.
+
+  KnowledgeBase:
+    type: object
+    description: >-
+      The knowledge base. Every text is plain text, Markdown or HTML and can be an empty string. Keys
+      you stored that are not listed here are kept and returned as they are.
+    properties:
+      productsInformation:
+        type: string
+        description: The products and services you sell.
+      painPoints:
+        type: string
+        description: The customer problems your products solve.
+      valueProposition:
+        type: string
+        description: Why customers choose your products.
+      qualificationCriteria:
+        type: string
+        description: What makes a lead worth pursuing.
+      entries:
+        type: array
+        description: Your team's custom entries, in display order. Can be absent when the workspace has never saved one.
+        items: { $ref: "#/components/schemas/KnowledgeEntry" }
+
+  WorkspaceProfile:
+    type: object
+    description: >-
+      The workspace's profile and knowledge base. The response also carries other workspace
+      settings that this page does not document. Rely only on the fields listed here.
+    properties:
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace's id.
+      _id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The same value as `id`.
+      name:
+        type: string
+        description: The workspace's name.
+      businessContext:
+        type: string
+        description: What the business does, in your team's words. Empty string when not set.
+      knowledgeBase: { $ref: "#/components/schemas/KnowledgeBase" }
+      website:
+        type: string
+        description: The company website. Absent when not set.
+      industry:
+        type: string
+        description: The industry. Absent when not set.
+      timezone:
+        type: string
+        description: The workspace's time zone. Absent when not set.
+      address:
+        type: string
+        description: Street address. Absent when not set.
+      city:
+        type: string
+        description: City. Absent when not set.
+      state:
+        type: string
+        description: State or region. Absent when not set.
+      zipcode:
+        type: string
+        description: Postal code. Absent when not set.
+      country:
+        type: string
+        description: Country. Absent when not set.
+      logo:
+        type: string
+        description: The logo, as a file id or the https URL of a file stored in Heliyos. Absent when not set.
+      createdAt: { $ref: "#/components/schemas/Timestamp" }
+      updatedAt: { $ref: "#/components/schemas/Timestamp" }
+
+operations:
+  getCurrentOrganization:
+    summary: Get the knowledge base
+    description: |
+      Returns the workspace your API key belongs to with its knowledge base: the business context,
+      the four fixed texts and the custom entries, plus the workspace's profile (name, website,
+      industry, time zone and address).
+
+      Texts come back in full. Read this before you call **Update the knowledge base**, because
+      that call replaces the knowledge base whole.
+
+      To list the files your workers read, call **List files** with `kind=knowledge_base`.
+    response:
+      description: The workspace profile and its knowledge base.
+      message: Organization Successfully Fetched.
+      data: { $ref: "#/components/schemas/WorkspaceProfile" }
+      example:
+        id: 66a0f1e2d3c4b5a697887766
+        _id: 66a0f1e2d3c4b5a697887766
+        name: Northwind Traders
+        website: https://northwind.example.com
+        industry: Wholesale distribution
+        timezone: America/New_York
+        businessContext: >-
+          Northwind Traders supplies specialty food and beverage products to independent grocers and
+          cafes across North America.
+        knowledgeBase:
+          productsInformation: Wholesale catalogue of 1,200 specialty foods, with next-day delivery in 40 metro areas.
+          painPoints: Independent grocers lose margin to stockouts and juggle too many small suppliers.
+          valueProposition: One supplier, one invoice and next-day restocking for the long tail of the shelf.
+          qualificationCriteria: Independent grocers or cafe groups with 3 or more locations and a buyer we can reach.
+          entries:
+            - label: Pricing
+              content: Volume pricing starts at $5,000 a month. Net 30 terms after the first order.
+            - label: Competitors
+              content: Regional distributors and direct-from-brand programs. We win on breadth and delivery speed.
+        createdAt: "2024-07-24T09:15:00.000Z"
+        updatedAt: "2026-11-02T14:30:00.000Z"
+
+  updateCurrentOrganization:
+    summary: Update the knowledge base
+    description: |
+      Changes the knowledge base, the business context and the workspace profile. Send only the
+      fields you want to change. Fields you leave out keep their values.
+
+      **`knowledgeBase` is replaced whole.** When you send it, the stored knowledge base becomes
+      exactly what you sent: a fixed text or an entry you leave out is removed. To change one text
+      or add one entry, call **Get the knowledge base**, change what you need, and send the whole
+      object back.
+
+      - An empty string clears a text.
+      - Top-level fields this page does not list are ignored without an error.
+      - Keys inside `knowledgeBase` and its entries that are not listed here are stored as you send them.
+      - Entry labels are not checked for duplicates. Keep them unique so people and workers can tell them apart.
+
+      Workers read the new knowledge base on their next run. Only workspace owners and admins can
+      call this. API keys act as an admin, so every key can.
+    content: |
+      <Warning>
+        Sending `knowledgeBase` replaces it whole. Leaving out a text or an entry deletes it, and
+        it cannot be recovered. Read the knowledge base first and send every text and entry you
+        want to keep.
+      </Warning>
+    requestBody:
+      schema:
+        type: object
+        properties:
+          businessContext:
+            type: string
+            description: What the business does, in your team's words. Plain text or Markdown. An empty string clears it.
+          knowledgeBase:
+            type: object
+            description: >-
+              The whole knowledge base. Replaces the stored one. Each text is plain text, Markdown or
+              HTML, and an empty string clears it.
+            properties:
+              productsInformation:
+                type: string
+                description: The products and services you sell.
+              painPoints:
+                type: string
+                description: The customer problems your products solve.
+              valueProposition:
+                type: string
+                description: Why customers choose your products.
+              qualificationCriteria:
+                type: string
+                description: What makes a lead worth pursuing.
+              entries:
+                type: array
+                description: Every custom entry you want to keep, in display order. Send `[]` to remove them all.
+                items:
+                  type: object
+                  properties:
+                    label:
+                      type: string
+                      description: The entry's title, for example `Pricing`.
+                    content:
+                      type: string
+                      description: The entry's content, as plain text or HTML.
+          name:
+            type: string
+            minLength: 1
+            maxLength: 200
+            description: The workspace's name, 1 to 200 characters after trimming.
+          website:
+            type: string
+            format: uri
+            description: The company website, an `http` or `https` URL. An empty string clears it.
+          industry:
+            type: string
+            description: The industry, as free text. An empty string clears it.
+          timezone:
+            type: string
+            description: The workspace's time zone, as an IANA name such as `America/New_York`. Not checked against a list. An empty string clears it.
+          address:
+            type: string
+            description: Street address. An empty string clears it.
+          city:
+            type: string
+            description: City. An empty string clears it.
+          state:
+            type: string
+            description: State or region. An empty string clears it.
+          zipcode:
+            type: string
+            description: Postal code. An empty string clears it.
+          country:
+            type: string
+            description: Country. An empty string clears it.
+          logo:
+            type: string
+            description: >-
+              The logo: the id of a file uploaded with **Upload a file**, or the https URL Heliyos
+              returned for it. Other URLs are refused. An empty string clears it.
+      examples:
+        knowledgeBase:
+          summary: Add a knowledge entry
+          value:
+            knowledgeBase:
+              productsInformation: Wholesale catalogue of 1,200 specialty foods, with next-day delivery in 40 metro areas.
+              painPoints: Independent grocers lose margin to stockouts and juggle too many small suppliers.
+              valueProposition: One supplier, one invoice and next-day restocking for the long tail of the shelf.
+              qualificationCriteria: Independent grocers or cafe groups with 3 or more locations and a buyer we can reach.
+              entries:
+                - label: Pricing
+                  content: Volume pricing starts at $5,000 a month. Net 30 terms after the first order.
+                - label: Competitors
+                  content: Regional distributors and direct-from-brand programs. We win on breadth and delivery speed.
+                - label: Delivery areas
+                  content: Next-day delivery in 40 metro areas across the US and Canada. Two-day delivery elsewhere.
+        businessContext:
+          summary: Change the business context only
+          value:
+            businessContext: >-
+              Northwind Traders supplies specialty food and beverage products to independent grocers
+              and cafes across North America.
+    response:
+      description: The changes were saved. `data` is an empty object. Call **Get the knowledge base** to read the result.
+      message: Organization details successfully updated.
+      empty: true
+    errors:
+      "400": "VALIDATION_FAILED: a field has the wrong type, `name` is empty or longer than 200 characters, `website` is not an http or https URL, or `logo` is not a Heliyos file."
+      "403": "FORBIDDEN_ACTION: the caller is not an owner or admin of the workspace."

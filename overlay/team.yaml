@@ -1,0 +1,309 @@
+tag:
+  name: Team
+  icon: /icons/app-teams.svg
+  order: 130
+  description: >-
+    The people in your workspace and their roles: joined members and pending invitations.
+    Inviting someone sends them an email.
+
+components:
+  TeamMembership:
+    type: object
+    description: A person's membership of the workspace, or a pending invitation.
+    properties:
+      _id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The membership id. Present in list results.
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The membership id, the same value as `_id`. Use it to remove the member or change their role.
+      email:
+        type: string
+        format: email
+        description: The address the invitation was sent to, in lower case.
+      roleId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The role's id. See **List roles**.
+      roleName:
+        type: string
+        description: "The role's name: `OWNER`, `ADMIN`, `MEMBER`, or `AGENCY` in an agency workspace. List results only."
+        example: MEMBER
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace.
+      userId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The person's user id. Absent while an invited person has no Heliyos account.
+      firstName:
+        type: string
+        description: The person's first name, once they have an account. List results only.
+      lastName:
+        type: string
+        description: The person's last name, once they have an account. List results only.
+      pictureUrl:
+        type: string
+        description: The person's profile picture, when they set one. List results only.
+      status:
+        type: string
+        enum: [SENT, ACCEPTED, REGISTERED, REJECTED, REVOKED]
+        description: |
+          - `SENT`: invited, not joined yet. The invitation link expires 7 days after it was sent.
+          - `ACCEPTED`: joined by accepting an invitation.
+          - `REGISTERED`: joined by creating the workspace.
+          - `REJECTED`, `REVOKED`: found on older invitations only.
+        example: ACCEPTED
+      expiresOn:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the invitation link expires. Returned by **Invite a team member** only.
+      onboardingSteps:
+        type: array
+        description: The person's onboarding progress in Heliyos. Empty for a new invitation. Returned by **Invite a team member** only.
+        items:
+          type: object
+          properties:
+            name: { type: string, description: The step's name. }
+            isCompleted: { type: boolean, description: Whether the step is done. }
+            isSkipped: { type: boolean, description: Whether the step was skipped. }
+      createdAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the invitation was sent or the membership was created.
+      updatedAt: { $ref: "#/components/schemas/Timestamp" }
+
+  Role:
+    type: object
+    properties:
+      id: { $ref: "#/components/schemas/ObjectId" }
+      name:
+        type: string
+        description: |
+          - `OWNER`: full control, including granting and taking away the owner role.
+          - `ADMIN`: manages members and roles, except owners and the owner role.
+          - `MEMBER`: works in the workspace; cannot manage members, roles or API keys.
+          - `AGENCY`: the role for agency workspaces only.
+        example: MEMBER
+      createdAt: { $ref: "#/components/schemas/Timestamp" }
+      updatedAt: { $ref: "#/components/schemas/Timestamp" }
+
+operations:
+  listTeamMemberships:
+    summary: List team members
+    description: |
+      Returns the workspace's memberships: people who joined and invitations still pending, oldest
+      first. Each entry's `id` is what **Remove a team member** and **Change a team member's role**
+      take.
+
+      The list pages by page number: `meta.pagination` holds `page`, `pageSize` and `count`, the
+      total number of matching memberships.
+    parameters:
+      search:
+        description: >-
+          Text to match, case-insensitive and literally, in the email address, first name or last
+          name. Up to 200 characters. Empty matches everyone.
+        example: northwind
+      page:
+        description: The page number, starting at 1. Defaults to 1.
+        example: 1
+      pageSize:
+        description: Memberships per page, 1 to 100. Defaults to 20.
+        example: 20
+      roleName:
+        description: >-
+          Only memberships with this role. Workspace roles are `OWNER`, `ADMIN` and `MEMBER`, plus
+          `AGENCY` in an agency workspace. The other accepted values are Heliyos staff roles and match
+          no one in a workspace. Empty means every role.
+        example: ADMIN
+    response:
+      description: A page of memberships.
+      message: Team members fetched successfully.
+      pagination: offset
+      paginationExample: { count: 2, page: 1, pageSize: 20 }
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/TeamMembership" }
+      example:
+        - _id: 66a0f1e2d3c4b5a697882222
+          id: 66a0f1e2d3c4b5a697882222
+          email: avery.chen@example.com
+          roleId: 66a0f1e2d3c4b5a697880a01
+          roleName: OWNER
+          organizationId: 66a0f1e2d3c4b5a697887766
+          status: REGISTERED
+          userId: 66a0f1e2d3c4b5a697881111
+          firstName: Avery
+          lastName: Chen
+          createdAt: "2026-06-02T08:00:00.000Z"
+          updatedAt: "2026-06-02T08:00:00.000Z"
+        - _id: 6729e1f2a3b4c5d6e7f80912
+          id: 6729e1f2a3b4c5d6e7f80912
+          email: jordan.lee@example.com
+          roleId: 66a0f1e2d3c4b5a697880a03
+          roleName: MEMBER
+          organizationId: 66a0f1e2d3c4b5a697887766
+          status: SENT
+          createdAt: "2026-11-04T09:30:00.000Z"
+          updatedAt: "2026-11-04T09:30:00.000Z"
+
+  createTeamMembership:
+    summary: Invite a team member
+    description: |
+      Invites a person to the workspace with a role and emails them an invitation link. They join
+      when they accept it. The link expires after 7 days; resend an expired invitation from Heliyos
+      under Settings, Team. A person who already has a Heliyos account gets an invitation addressed
+      to them by name.
+
+      With an API key you can only invite with the `MEMBER` role. Get the role's id from
+      **List roles**.
+
+      An address with a pending invitation, or of someone already in the workspace, is refused.
+    content: |
+      <Warning>
+        This sends an invitation email to the address straight away. Check the address, and check
+        **List team members** first so you do not invite someone twice.
+      </Warning>
+    requestBody:
+      schema:
+        type: object
+        required: [email, roleId]
+        properties:
+          email:
+            type: string
+            format: email
+            description: The person's email address. Stored in lower case.
+            example: jordan.lee@example.com
+          roleId:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: >-
+              The role to give them, from **List roles**. With an API key, the `MEMBER` role's id.
+      example:
+        email: jordan.lee@example.com
+        roleId: 66a0f1e2d3c4b5a697880a03
+    response:
+      description: The new membership, with status `SENT`. The invitation link is never returned.
+      message: Invitation sent successfully.
+      data: { $ref: "#/components/schemas/TeamMembership" }
+      example:
+        id: 6729e1f2a3b4c5d6e7f80912
+        email: jordan.lee@example.com
+        roleId: 66a0f1e2d3c4b5a697880a03
+        organizationId: 66a0f1e2d3c4b5a697887766
+        status: SENT
+        expiresOn: "2026-11-11T09:30:00.000Z"
+        onboardingSteps: []
+        createdAt: "2026-11-04T09:30:00.000Z"
+        updatedAt: "2026-11-04T09:30:00.000Z"
+    errors:
+      "400": "VALIDATION_FAILED: `email` is not a valid address, or `roleId` is not a role you can give in this workspace."
+      "403": "FORBIDDEN_ACTION: an API key invited with a role other than `MEMBER`, or the caller may not grant the owner role."
+      "409": "CONFLICT: the address already has a pending invitation, or the person is already in the workspace. Nothing is sent."
+
+  deleteTeamMembership:
+    summary: Remove a team member
+    description: |
+      Removes a person from the workspace, or cancels a pending invitation, by membership id.
+
+      For a person who joined, removal takes effect at once: their sessions in the workspace end,
+      the API keys they created in it are revoked, and they no longer appear in the workspace. A
+      cancelled invitation's link stops working. To bring someone back, invite them again.
+
+      Only owners and admins can remove members. Only an owner can remove an owner, and the
+      workspace's last owner cannot be removed.
+    content: |
+      <Warning>
+        API keys cannot call this endpoint: it answers `403 FORBIDDEN_ACTION` ("API keys cannot
+        access this endpoint."). Remove members in Heliyos under Settings, Team. Removal cannot be
+        undone.
+      </Warning>
+    parameters:
+      id:
+        description: The membership id, from **List team members**.
+        example: 6729e1f2a3b4c5d6e7f80912
+    response:
+      description: The membership was removed.
+      message: Team membership revoked successfully.
+      data:
+        type: object
+        properties:
+          deleted:
+            type: boolean
+            description: Always `true`.
+      example:
+        deleted: true
+    errors:
+      "403": "FORBIDDEN_ACTION: the request used an API key, the caller is not an owner or admin, an admin tried to remove an owner, or the member is the workspace's last owner."
+      "404": "NOT_FOUND: no membership with this id in the workspace."
+
+  updateTeamMembershipRole:
+    summary: Change a team member role
+    description: |
+      Gives a member or a pending invitation a new role, by membership id. The change applies to the
+      person's next request.
+
+      A person moved to a role below admin (`MEMBER`) loses the API keys they created in the
+      workspace: they are revoked.
+
+      Only owners and admins can change roles. Nobody can change their own role. Only an owner can
+      grant the owner role or change an owner's role, and the workspace's last owner cannot be
+      moved to another role.
+    content: |
+      <Warning>
+        API keys cannot call this endpoint: it answers `403 FORBIDDEN_ACTION` ("API keys cannot
+        access this endpoint."). Change roles in Heliyos under Settings, Team.
+      </Warning>
+    parameters:
+      id:
+        description: The membership id, from **List team members**.
+        example: 6729e1f2a3b4c5d6e7f80912
+    requestBody:
+      schema:
+        type: object
+        required: [roleId]
+        properties:
+          roleId:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: >-
+              The new role's id, from **List roles**: `OWNER`, `ADMIN` or `MEMBER`, or `AGENCY` in an
+              agency workspace.
+      example:
+        roleId: 66a0f1e2d3c4b5a697880a02
+    response:
+      description: The role was changed. `data` is an empty object.
+      message: Role updated successfully.
+      empty: true
+    errors:
+      "400": "VALIDATION_FAILED: `roleId` is not a role you can give in this workspace."
+      "403": "FORBIDDEN_ACTION: the request used an API key, the caller is not an owner or admin, the caller targeted their own membership, an admin tried to grant or take away the owner role, or the member is the workspace's last owner."
+      "404": "NOT_FOUND: no membership with this id in the workspace."
+
+  listRoles:
+    summary: List roles
+    description: |
+      Returns the roles you can give people, with the ids that **Invite a team member** takes. Roles
+      are the same for every workspace. Read the ids from this endpoint instead of hardcoding them.
+    parameters:
+      organizationType:
+        description: |
+          Narrows the list to the roles of one kind of workspace:
+          - `STANDARD`: `OWNER`, `ADMIN` and `MEMBER`.
+          - `AGENCY`: `AGENCY` only.
+
+          Omit it for every role except Heliyos staff roles.
+        example: STANDARD
+    response:
+      description: The roles.
+      message: Roles fetched successfully
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/Role" }
+      example:
+        - id: 66a0f1e2d3c4b5a697880a01
+          name: OWNER
+          createdAt: "2026-01-10T00:00:00.000Z"
+          updatedAt: "2026-01-10T00:00:00.000Z"
+        - id: 66a0f1e2d3c4b5a697880a02
+          name: ADMIN
+          createdAt: "2026-01-10T00:00:00.000Z"
+          updatedAt: "2026-01-10T00:00:00.000Z"
+        - id: 66a0f1e2d3c4b5a697880a03
+          name: MEMBER
+          createdAt: "2026-01-10T00:00:00.000Z"
+          updatedAt: "2026-01-10T00:00:00.000Z"

@@ -1,0 +1,491 @@
+tag:
+  name: Files
+  icon: /icons/app-file.svg
+  order: 110
+  description: >-
+    Knowledge base files that workers read, and files attached to records, tasks and other
+    resources. The API calls them attachments. Uploading takes three calls: get an upload URL,
+    send the bytes to it, then create the file.
+
+components:
+  FileLink:
+    type: object
+    description: A resource the file is attached to.
+    properties:
+      objectId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: Id of the linked record, task, interaction, or of the workspace itself for a knowledge base file.
+      schemaId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The linked record's object (base schema). Absent for links that are not records.
+      objectType:
+        type: string
+        description: >-
+          What the link points at: `company`, `people`, `deal` or a custom object's type for a
+          record, `task`, `note`, `comment`, `interaction`, or `organization` for a knowledge base file.
+        example: company
+
+  File:
+    type: object
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The same value as `_id`. Present in list results only.
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the file belongs to.
+      fileName:
+        type: string
+        description: The file's display name, as sent when the file was created.
+      fileSize:
+        type: integer
+        description: Size in bytes, as sent when the file was created.
+      mimeType:
+        type: string
+        description: The content type, for example `application/pdf`.
+      url:
+        type: string
+        description: >-
+          Where the file is stored. To download the file, use Get a file download link.
+      storageProvider:
+        type: string
+        description: The storage provider recorded when the file was created.
+      storageKey:
+        type: string
+        description: The file's storage key, inside your workspace's folder.
+      description:
+        type: string
+        description: An optional description. Absent when none was sent.
+      isKbFile:
+        type: boolean
+        description: "`true` for a knowledge base file (workers read it), `false` for a file attached to a resource."
+      relationships:
+        type: array
+        description: The resources the file is attached to. Not hydrated.
+        items: { $ref: "#/components/schemas/FileLink" }
+      metadata: { $ref: "#/components/schemas/AuditMetadata" }
+
+  FileUploadUrl:
+    type: object
+    properties:
+      presignedUrl:
+        type: string
+        description: >-
+          The signed upload URL. Send the file's bytes to it with `PUT`, within one hour. Do not send
+          your API key to it.
+      fileKey:
+        type: string
+        description: >-
+          The storage key the file will be stored under. Send it back as `storageKey` when you create
+          the file. Its extension comes from `mimeType`, not from `fileName`.
+      bucketName:
+        type: string
+        description: The storage bucket the URL uploads to. You need it to build `url` when you create the file.
+
+  FileDownloadUrl:
+    type: object
+    properties:
+      url:
+        type: string
+        description: >-
+          The link. When `forced` is `true` it is a signed link that downloads the file under its
+          `fileName` and expires 60 seconds after the call.
+      forced:
+        type: boolean
+        description: >-
+          `true` for a short-lived signed download link. `false` for an older file stored outside
+          Heliyos's upload storage: `url` is then the file's stored URL, returned as is.
+
+operations:
+  createPresignedUrl:
+    summary: Create an upload URL
+    description: |
+      Returns a short-lived signed URL to upload one file's bytes to, the first of three steps.
+      Nothing is stored and no file exists until you create it with
+      **Create a file**.
+
+      The URL is valid for one hour and accepts exactly one body: the `Content-Type` and
+      `Content-Length` you send with the `PUT` must equal `mimeType` and `fileSize` here, or storage
+      refuses the upload.
+
+      **Accepted content types.** Images (`image/png`, `image/jpeg`, `image/jpg`, `image/gif`,
+      `image/webp`, `image/heic`, `image/heif`, `image/bmp`, `image/tiff`), PDF (`application/pdf`),
+      Office and OpenDocument files (`application/msword`,
+      `application/vnd.openxmlformats-officedocument.wordprocessingml.document`,
+      `application/vnd.ms-excel`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`,
+      `application/vnd.ms-powerpoint`,
+      `application/vnd.openxmlformats-officedocument.presentationml.presentation`,
+      `application/vnd.oasis.opendocument.text`, `application/vnd.oasis.opendocument.spreadsheet`,
+      `application/vnd.oasis.opendocument.presentation`), `application/rtf`, text and data
+      (`text/plain`, `text/csv`, `text/tab-separated-values`, `text/markdown`, `application/json`,
+      `text/calendar`, `message/rfc822`), audio (`audio/mpeg`, `audio/mp4`, `audio/x-m4a`,
+      `audio/wav`, `audio/x-wav`, `audio/webm`, `audio/ogg`), video (`video/mp4`, `video/quicktime`,
+      `video/webm`), ZIP (`application/zip`, `application/x-zip-compressed`) and
+      `application/octet-stream` for anything else. HTML, SVG, XML, scripts and executables are
+      refused. Text types and `application/json` may carry a `; charset=` parameter.
+    content: |
+      <Steps>
+        <Step title="Get an upload URL">
+          Call this endpoint with the file's name, content type and exact size in bytes. Keep
+          `presignedUrl`, `fileKey` and `bucketName` from the response.
+        </Step>
+        <Step title="Upload the bytes">
+          Send the file to `presignedUrl` within one hour, without your API key:
+
+          ```bash
+          curl -X PUT "$PRESIGNED_URL" \
+            -H "Content-Type: application/pdf" \
+            -H "Content-Length: 482113" \
+            --data-binary @pricing-2026.pdf
+          ```
+
+          `Content-Type` and `Content-Length` must match `mimeType` and `fileSize` exactly.
+        </Step>
+        <Step title="Create the file">
+          Call **Create a file** with `storageKey` set to `fileKey`
+          and `url` set to `https://{bucketName}.s3.amazonaws.com/{fileKey}`. Until then the file is
+          not listed anywhere and workers cannot read it.
+        </Step>
+      </Steps>
+    requestBody:
+      schema:
+        type: object
+        required: [fileName, mimeType, fileSize]
+        properties:
+          fileName:
+            type: string
+            description: >-
+              The file's name, up to 1,000 characters. It becomes part of the storage key, with
+              separators and control characters replaced.
+            example: pricing-2026.pdf
+          mimeType:
+            type: string
+            description: >-
+              The file's content type, one of the accepted types listed above (case-insensitive).
+              Send exactly this value as `Content-Type` with the upload.
+            example: application/pdf
+          objectType:
+            type: string
+            nullable: true
+            description: >-
+              Optional. The type of record the file will be attached to: `company`, `people`, `deal`
+              (or `deals`). Files for these types are stored in a separate folder per type. Any other
+              value, an empty string or null stores the file in the workspace's main folder.
+            example: company
+          fileSize:
+            type: integer
+            description: >-
+              The file's exact size in bytes, from 1 to 26,214,400 (25 MB). Send exactly this value as
+              `Content-Length` with the upload.
+            example: 482113
+      example:
+        fileName: pricing-2026.pdf
+        mimeType: application/pdf
+        objectType: company
+        fileSize: 482113
+    response:
+      description: The upload URL and the key to create the file with.
+      message: Presigned URL generated successfully
+      data: { $ref: "#/components/schemas/FileUploadUrl" }
+      example:
+        presignedUrl: "https://example-bucket.s3.amazonaws.com/66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-SignedHeaders=content-length%3Bcontent-type%3Bhost&X-Amz-Signature=3f9a0c"
+        fileKey: 66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+        bucketName: example-bucket
+    errors:
+      "400": "VALIDATION_FAILED: a field is missing or invalid, `fileSize` is 0 or above 25 MB (26,214,400 bytes), or `mimeType` is not an accepted content type."
+
+  createAttachment:
+    summary: Create a file
+    description: |
+      Records a file you uploaded with an upload URL,
+      as a knowledge base file or as a file attached to records, tasks or other resources. This is
+      the last of three steps; see the steps above.
+
+      **Knowledge base files.** With `isKbFile: true` the file is linked to your workspace
+      automatically, and Heliyos copies it into the workers' workspace and extracts its text so
+      workers can read it. Text extraction can finish a little after this call returns.
+
+      **Retries are safe.** Creating a file again with the same `storageKey` returns the file
+      already created, unchanged, instead of a second one.
+
+      The file is checked before anything is written: `storageKey` must be inside your workspace's
+      folder and `url` must point at exactly that key. Every entry in `relationships` must name a
+      resource of your workspace.
+    content: |
+      <Steps>
+        <Step title="Get an upload URL">
+          Call **Create an upload URL** with the file's name,
+          content type and size.
+        </Step>
+        <Step title="Upload the bytes">
+          `PUT` the file to `presignedUrl` with the same `Content-Type` and `Content-Length`, without
+          your API key.
+        </Step>
+        <Step title="Create the file">
+          Call this endpoint with `storageKey` set to `fileKey`, `url` set to
+          `https://{bucketName}.s3.amazonaws.com/{fileKey}`, `storageProvider` set to `S3`, and the
+          same `fileName`, `mimeType` and `fileSize`.
+        </Step>
+      </Steps>
+    requestBody:
+      schema:
+        type: object
+        required: [fileName, fileSize, mimeType, url, storageProvider, storageKey]
+        properties:
+          relationships:
+            type: array
+            description: >-
+              Optional. The resources to attach the file to: records (`company`, `people`, `deal` or a
+              custom object's type, with `schemaId`), `task`, `note`, `comment`, `interaction`,
+              `meeting`, `email`, `chat` or `list`, up to 200 entries. Each must belong to your
+              workspace. An `organization` entry may only name your own workspace.
+            items:
+              type: object
+              required: [objectId, objectType]
+              properties:
+                objectId:
+                  allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+                  description: Id of the resource to attach the file to.
+                schemaId:
+                  type: string
+                  nullable: true
+                  description: The record's object (base schema) id. Send it for records; omit it or send null otherwise.
+                objectType:
+                  type: string
+                  description: What `objectId` points at, for example `company`, `task` or `interaction`.
+                  example: company
+          fileName:
+            type: string
+            description: The name shown for the file. Usually the same name you sent for the upload URL.
+            example: pricing-2026.pdf
+          fileSize:
+            type: integer
+            description: The file's size in bytes, 0 to 26,214,400 (25 MB). Send the size you uploaded.
+            example: 482113
+          mimeType:
+            type: string
+            description: The file's content type. Send the `mimeType` you uploaded with.
+            example: application/pdf
+          url:
+            type: string
+            description: >-
+              `https://{bucketName}.s3.amazonaws.com/{fileKey}`, built from the upload URL response.
+              HTTPS only, with no port, credentials, query or fragment. Up to 2,048 characters.
+            example: https://example-bucket.s3.amazonaws.com/66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+          storageProvider:
+            type: string
+            description: The storage provider. Send `S3`.
+            example: S3
+          storageKey:
+            type: string
+            description: The `fileKey` from the upload URL response. A key outside your workspace's folder is refused.
+            example: 66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+          isKbFile:
+            type: boolean
+            description: >-
+              `true` to add the file to the knowledge base, where workers read it. Defaults to `false`,
+              a file attached to the resources in `relationships`.
+            example: false
+          description:
+            type: string
+            description: Optional. A short description of the file. May be empty.
+            example: 2026 list prices and discount bands.
+      examples:
+        recordFile:
+          summary: A file attached to a company
+          value:
+            fileName: pricing-2026.pdf
+            fileSize: 482113
+            mimeType: application/pdf
+            url: https://example-bucket.s3.amazonaws.com/66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+            storageProvider: S3
+            storageKey: 66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+            relationships:
+              - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+                schemaId: 66a0f1e2d3c4b5a697880001
+                objectType: company
+        knowledgeBase:
+          summary: A knowledge base file
+          value:
+            fileName: sales-playbook.pdf
+            fileSize: 1048576
+            mimeType: application/pdf
+            url: https://example-bucket.s3.amazonaws.com/66a0f1e2d3c4b5a697887766/1762248700000-sales-playbook.pdf
+            storageProvider: S3
+            storageKey: 66a0f1e2d3c4b5a697887766/1762248700000-sales-playbook.pdf
+            isKbFile: true
+            description: How we qualify and price enterprise deals.
+    response:
+      description: The created file, or the file already created with this `storageKey`.
+      message: Attachment created successfully.
+      data: { $ref: "#/components/schemas/File" }
+      example:
+        _id: 6729c0d4e5f6a7b8c9d0e1f2
+        organizationId: 66a0f1e2d3c4b5a697887766
+        fileName: pricing-2026.pdf
+        fileSize: 482113
+        mimeType: application/pdf
+        url: https://example-bucket.s3.amazonaws.com/66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+        storageProvider: S3
+        storageKey: 66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+        isKbFile: false
+        relationships:
+          - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+        metadata:
+          created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": "VALIDATION_FAILED: a field is missing or invalid, `fileSize` is above 25 MB, or `url` is not the storage URL of `storageKey`."
+      "403": "FORBIDDEN_ACTION: `storageKey` is outside your workspace's folder."
+      "404": "NOT_FOUND: a `relationships` entry names a resource that is not in your workspace. Nothing is written."
+
+  listAttachments:
+    summary: List files
+    description: |
+      Returns the workspace's files, newest first: knowledge base files and files attached to
+      resources. Use `kind` to list only one of the two.
+
+      By default the list pages with a cursor: pass `limit`, then send `meta.pagination.next_cursor`
+      back as `cursor` for the next page. A `sort` or `page` in `filters`, or the `page` parameter,
+      switches to page-number paging, sorted by creation date (newest first) unless you sort, with
+      `meta.pagination` holding `page`, `limit`, `totalPages`, `count` and `hasMore`. See
+      [Pagination](/api-reference/pagination) and [Filtering and sorting](/api-reference/filtering).
+
+      To list the files attached to one record, send `{"objectId": "<record id>"}` in `filters`.
+    parameters:
+      limit:
+        description: Files per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. Only valid with the default order (newest first) and no sort.
+      page:
+        description: A page number, starting at 1, for page-number paging. Pages are `limit` files long, or `filters.pageSize` when sent.
+      kind:
+        description: |
+          Which files to list:
+          - `knowledge_base`: knowledge base files only.
+          - `attachment`: files attached to resources only.
+
+          Omit for both. Takes precedence over `isKbFile` in `filters`.
+        example: knowledge_base
+      filters:
+        description: |
+          A JSON object, URL-encoded. Keys:
+          - `search` (string): matches text in the file name or content type, case-insensitive.
+          - `objectId` (id): only files attached to this record, task or other resource.
+            `relationshipObjectId` does the same.
+          - `isKbFile` (boolean): `true` for knowledge base files, `false` for the others.
+          - `filters` (array, up to 500): conditions `{ "field", "operator", "value" }`. Useful fields:
+            `fileName`, `mimeType`, `fileSize`, `description`. Operators: `equals`, `not_equals`,
+            `contains`, `gt`, `gte`, `lt`, `lte`. Any other operator is ignored. All conditions must match.
+          - `sort` (array): `{ "field", "direction" }` with direction `asc` or `desc`. Switches to page-number paging.
+          - `page`, `pageSize` (integers from 1): page-number paging. `pageSize` above 200 is lowered to 200.
+        example: '{"search":"pricing","objectId":"66f1a8c3e4b0a1b2c3d4e5f6"}'
+    response:
+      description: A page of files.
+      message: Attachments fetched successfully.
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/File" }
+      example:
+        - _id: 6729c0d4e5f6a7b8c9d0e1f2
+          id: 6729c0d4e5f6a7b8c9d0e1f2
+          organizationId: 66a0f1e2d3c4b5a697887766
+          fileName: pricing-2026.pdf
+          fileSize: 482113
+          mimeType: application/pdf
+          url: https://example-bucket.s3.amazonaws.com/66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+          storageProvider: S3
+          storageKey: 66a0f1e2d3c4b5a697887766/objects/company/1762248600000-pricing-2026.pdf
+          isKbFile: false
+          relationships:
+            - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+              schemaId: 66a0f1e2d3c4b5a697880001
+              objectType: company
+          metadata:
+            created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+            updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": "VALIDATION_FAILED: `filters` is not a JSON object, holds a database operator, or `cursor` is sent with a sort or page."
+
+  getAttachment:
+    summary: Get a file
+    description: |
+      Returns one file's details: name, content type, size, kind and the resources it is attached to.
+      To download the file itself, use **Get a file download link**.
+    parameters:
+      id:
+        description: The file's id.
+        example: 6729c0d4e5f6a7b8c9d0e1f2
+    response:
+      description: The file.
+      message: Attachment fetched successfully.
+      data: { $ref: "#/components/schemas/File" }
+      example:
+        _id: 6729c0d4e5f6a7b8c9d0e1f2
+        organizationId: 66a0f1e2d3c4b5a697887766
+        fileName: sales-playbook.pdf
+        fileSize: 1048576
+        mimeType: application/pdf
+        url: https://example-bucket.s3.amazonaws.com/66a0f1e2d3c4b5a697887766/1762248700000-sales-playbook.pdf
+        storageProvider: S3
+        storageKey: 66a0f1e2d3c4b5a697887766/1762248700000-sales-playbook.pdf
+        description: How we qualify and price enterprise deals.
+        isKbFile: true
+        relationships:
+          - objectId: 66a0f1e2d3c4b5a697887766
+            objectType: organization
+        metadata:
+          created: { at: "2026-11-04T09:35:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:35:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "404": "NOT_FOUND: no file with this id in the workspace."
+
+  getAttachmentDownloadUrl:
+    summary: Get a file download link
+    description: |
+      Returns a signed link that downloads the file under its `fileName`. The link expires
+      60 seconds after the call, so use it at once and call again for a new one. No API key is
+      needed to open it.
+
+      A few older files are stored outside Heliyos's upload storage. For those, `forced` is `false`
+      and `url` is the file's stored URL, returned as is.
+    parameters:
+      id:
+        description: The file's id.
+        example: 6729c0d4e5f6a7b8c9d0e1f2
+    response:
+      description: The download link.
+      message: Download link generated
+      data: { $ref: "#/components/schemas/FileDownloadUrl" }
+      example:
+        url: "https://example-bucket.s3.amazonaws.com/66a0f1e2d3c4b5a697887766/1762248700000-sales-playbook.pdf?response-content-disposition=attachment&X-Amz-Expires=60&X-Amz-Signature=8b2e41"
+        forced: true
+    errors:
+      "404": "NOT_FOUND: no file with this id in the workspace."
+
+  deleteAttachment:
+    summary: Delete a file
+    description: |
+      Deletes a file permanently. It disappears from every resource it was attached to, and its
+      stored bytes are removed unless another file of the workspace points at the same storage key.
+      A knowledge base file is also removed from the workers' workspace, so workers stop reading it.
+    content: |
+      <Warning>
+        This cannot be undone. The file's bytes are deleted with it, and a knowledge base file stops
+        informing workers at once.
+      </Warning>
+    parameters:
+      id:
+        description: The file's id.
+        example: 6729c0d4e5f6a7b8c9d0e1f2
+    response:
+      description: The file was deleted. `data` is an empty object.
+      message: Attachment deleted successfully
+      empty: true
+    errors:
+      "404": "NOT_FOUND: no file with this id in the workspace."

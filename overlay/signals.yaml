@@ -1,0 +1,289 @@
+tag:
+  name: Signals
+  icon: /icons/app-signals.svg
+  order: 90
+  description: >-
+    Signals are what Scouts find: one event, such as a funding round or a new executive, with a summary,
+    its sources and the company it is about. New signals are unread until you mark them read.
+
+components:
+  Signal:
+    type: object
+    description: One finding of a Scout.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace.
+      scoutSchemaId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The company Scout that found it (see `CompanyScout`). Its `defaultScoutId` is the workspace Scout.
+      baseSchemaObjectId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The company record the signal is about. Absent for signals of `entire_web` Scouts.
+      category:
+        type: string
+        description: The Scout's category when the signal was found, for example `Growth & Expansion`.
+      scout_name:
+        type: string
+        description: The Scout's name when the signal was found.
+      scope:
+        type: string
+        enum: [watchlist, entire_web]
+        description: "`entire_web` for signals of web-wide Scouts, `watchlist` otherwise."
+      company_name:
+        type: string
+        description: The company name the Scout reported. May be absent; for watched companies use `baseSchemaObjectId`.
+      website:
+        type: string
+        description: The company's website the Scout reported, normalized to the site address. May be absent.
+      summary:
+        type: string
+        description: What happened, in a sentence or two.
+      citations:
+        type: array
+        description: Source URLs that support the signal.
+        items: { type: string, format: uri }
+      relevance_score:
+        type: integer
+        minimum: 0
+        maximum: 100
+        description: How relevant the Scout judged the signal, 0 to 100. 0 when the Scout gave no score.
+      confidence_score:
+        type: number
+        description: The raw score the Scout reported, either 0 to 1 or 0 to 100. Prefer `relevance_score`.
+      source:
+        type: string
+        enum: [scouts, leadsets, linkedin]
+        description: What produced the signal. Scouts write `scouts`.
+      detected_date:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the event was detected. For custom Scouts, the time of the run that found it. Lists sort on it.
+      status:
+        type: string
+        enum: [new, read, archived]
+        description: "`new` (unread), `read`, or `archived`. This API sets `read`; it does not archive."
+      raw_output:
+        type: object
+        additionalProperties: true
+        description: The Scout's structured output for this signal, in the shape of its output schema.
+      eventId:
+        type: string
+        description: The id of the detection event. Internal; unique per run.
+      parallelMonitorId:
+        type: string
+        description: The id of the monitor or run that produced the signal. Internal.
+      taskRunId:
+        type: string
+        description: The id of the custom Scout run that produced the signal. Internal; absent for built-in Scouts.
+      webhook_timestamp:
+        type: string
+        description: When the result was delivered. Internal.
+      metadata: { $ref: "#/components/schemas/ScoutAuditMetadata" }
+
+  SignalWithCompany:
+    description: A signal with the name of the company it is about.
+    allOf:
+      - $ref: "#/components/schemas/Signal"
+      - type: object
+        properties:
+          companyName:
+            type: string
+            description: >-
+              The company record's `company_name` (or `name`, or `Unknown`) for watched companies, otherwise
+              the name the Scout reported. Absent when neither is known.
+
+operations:
+  listSignals:
+    summary: List signals
+    description: |
+      Returns the workspace's signals, most recently detected first. Filter by company, company Scout and status.
+
+      By default the list pages with a cursor: pass `limit`, then send `meta.pagination.next_cursor` back as
+      `cursor` for the next page. If the signal a cursor points at was deleted, the call answers 400; list
+      again from the first page. Sending `offset` or `page` (without `cursor`) switches to offset paging,
+      where `meta.pagination` is `{ limit, offset, total, hasMore }`. See [Pagination](/api-reference/pagination).
+
+      `scoutId` here is a company Scout id. To list everything one workspace Scout found across its companies,
+      use `GET /v1/platform/global-scouts/{id}/signals`.
+    parameters:
+      limit:
+        description: Signals per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. Takes precedence over `offset` and `page`.
+      page:
+        description: A page number, starting at 1, for offset paging. Skips `(page - 1) * limit` signals. Ignored when `offset` is sent.
+      offset:
+        description: The number of signals to skip, for offset paging.
+        example: 0
+      status:
+        description: "Only signals in this status: `new` (unread), `read` or `archived`."
+        example: new
+      scoutId:
+        description: Only signals found by this company Scout (an id from `GET /v1/platform/companies/{id}/scouts`). An unknown id returns an empty list.
+        example: 6732d4e5f6a7b8c9d0e1f2a3
+      companyId:
+        description: Only signals about this company record. An unknown id returns an empty list.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+    response:
+      description: A page of signals.
+      message: Signals retrieved successfully
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/Signal" }
+      example:
+        - _id: 6735a9d1e2f3a4b5c6d7e8f9
+          organizationId: 66a0f1e2d3c4b5a697887766
+          scoutSchemaId: 6732d4e5f6a7b8c9d0e1f2a5
+          baseSchemaObjectId: 66f1a8c3e4b0a1b2c3d4e5f6
+          category: Growth & Expansion
+          scout_name: Funding, M&A, or financial news
+          scope: watchlist
+          company_name: Northwind Traders
+          website: https://northwind.example.com
+          summary: Northwind Traders raised a 40 million dollar Series C to expand into Southeast Asia.
+          citations: ["https://news.example.com/northwind-series-c"]
+          relevance_score: 86
+          confidence_score: 0.86
+          source: scouts
+          detected_date: "2026-11-03T06:00:00.000Z"
+          status: new
+          metadata:
+            created: { at: "2026-11-03T06:02:00.000Z", by: webhook }
+            updated: { at: "2026-11-03T06:02:00.000Z", by: webhook }
+    errors:
+      "400": "VALIDATION_FAILED: a parameter is invalid, or the cursor is invalid or points at a signal that no longer exists."
+
+  listGlobalScoutSignals:
+    summary: List workspace Scout signals
+    description: |
+      Returns the signals one workspace Scout found across every company it runs on, most recently detected
+      first, each with `companyName`. Signals of company Scouts that were deleted (for example when a company
+      was unwatched or the Scout was edited to drop it) are not included.
+
+      Paging works as in List signals (`GET /v1/platform/signals`): cursor by default, offset paging when you
+      send `offset` or `page`.
+    parameters:
+      id:
+        description: The workspace Scout's id.
+        example: 6731c0a2b4e5f60718293a4b
+      limit:
+        description: Signals per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. Takes precedence over `offset` and `page`.
+      page:
+        description: A page number, starting at 1, for offset paging. Ignored when `offset` is sent.
+      offset:
+        description: The number of signals to skip, for offset paging.
+      status:
+        description: "Only signals in this status: `new` (unread), `read` or `archived`."
+        example: new
+      startDate:
+        description: Only signals detected at or after this ISO 8601 date-time.
+        example: "2026-10-01T00:00:00.000Z"
+      endDate:
+        description: Only signals detected at or before this ISO 8601 date-time.
+        example: "2026-11-01T00:00:00.000Z"
+      companyId:
+        description: Only signals about this company record. A company the Scout does not run on returns an empty list.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+    response:
+      description: A page of the Scout's signals.
+      message: Signals retrieved successfully
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/SignalWithCompany" }
+      example:
+        - _id: 6735a9d1e2f3a4b5c6d7e8fa
+          organizationId: 66a0f1e2d3c4b5a697887766
+          scoutSchemaId: 6732d4e5f6a7b8c9d0e1f2a3
+          baseSchemaObjectId: 66f1a8c3e4b0a1b2c3d4e5f6
+          category: Hiring
+          scout_name: Hiring for data roles
+          scope: watchlist
+          summary: Northwind Traders posted three senior data engineer roles in Lisbon.
+          citations: ["https://careers.northwind.example.com/jobs/data-engineer"]
+          relevance_score: 72
+          source: scouts
+          detected_date: "2026-11-03T06:00:00.000Z"
+          status: new
+          companyName: Northwind Traders
+    errors:
+      "400": "VALIDATION_FAILED: a parameter is invalid, or the cursor is invalid or points at a signal that no longer exists."
+      "404": "NOT_FOUND: no workspace Scout with this id in the workspace."
+
+  markSignalRead:
+    summary: Mark a signal read
+    description: |
+      Sets one signal's status to `read`. Marking a read signal again changes nothing; an archived signal
+      becomes `read`. To mark many at once, use `POST /v1/platform/signals/bulk-read`.
+    parameters:
+      id:
+        description: The signal's id.
+        example: 6735a9d1e2f3a4b5c6d7e8f9
+    response:
+      description: The signal, now read.
+      message: Signal marked as read
+      data:
+        type: object
+        properties:
+          success: { type: boolean, description: Always `true`. }
+          signal: { $ref: "#/components/schemas/Signal" }
+      example:
+        success: true
+        signal:
+          _id: 6735a9d1e2f3a4b5c6d7e8f9
+          organizationId: 66a0f1e2d3c4b5a697887766
+          baseSchemaObjectId: 66f1a8c3e4b0a1b2c3d4e5f6
+          scout_name: Funding, M&A, or financial news
+          summary: Northwind Traders raised a 40 million dollar Series C to expand into Southeast Asia.
+          detected_date: "2026-11-03T06:00:00.000Z"
+          status: read
+    errors:
+      "404": "NOT_FOUND: no signal with this id in the workspace."
+
+  bulkMarkSignalsRead:
+    summary: Mark signals read in bulk
+    description: |
+      Marks every `new` signal of one company, one company Scout, or both, read in one update. Send
+      `companyId`, `scoutId`, or both (then only signals matching both are marked).
+    content: |
+      <Warning>
+      With an empty body, every unread signal in the workspace is marked read. Send `companyId` or
+      `scoutId` to limit it.
+      </Warning>
+    requestBody:
+      schema:
+        type: object
+        properties:
+          companyId:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: Mark the unread signals about this company record.
+          scoutId:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: Mark the unread signals of this company Scout (not a workspace Scout id).
+      example:
+        companyId: 66f1a8c3e4b0a1b2c3d4e5f6
+    response:
+      description: How many signals were marked read.
+      message: Signals marked as read
+      data:
+        type: object
+        properties:
+          updated: { type: integer, description: Signals changed from `new` to `read`. 0 when none were unread. }
+          failed:
+            type: array
+            description: Always empty. The update is all or nothing.
+            items: { type: string }
+          marked_count: { type: integer, description: Same as `updated`. }
+      example:
+        updated: 4
+        failed: []
+        marked_count: 4
+    errors:
+      "404": "NOT_FOUND: `companyId` is not a record in this workspace, or `scoutId` is not a company Scout in this workspace."
+      "500": "INTERNAL: the signals could not be marked. Nothing was changed."

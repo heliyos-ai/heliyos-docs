@@ -1,0 +1,956 @@
+tag:
+  name: Schemas
+  icon: /icons/app-objects.svg
+  order: 20
+  description: >-
+    Objects are your record types: companies, people, deal pipelines and any custom objects you add.
+    Each object has fields, and a field's type decides what its records can hold.
+
+components:
+  SchemaObject:
+    type: object
+    description: An object (base schema) and its fields.
+    properties:
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: >-
+          The object's id. Records name it as their `schemaId`. List, create and update return it as
+          `id`; get returns it as `_id`.
+      _id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The object's id, as returned by get.
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the object belongs to.
+      name:
+        type: string
+        description: The display name, for example `Partners`. Unique in the workspace.
+      slug:
+        type: string
+        description: A short URL-safe name, unique in the workspace, used in web app links.
+      description:
+        type: string
+        description: What the object holds.
+      type:
+        type: string
+        enum: [base, computed, custom]
+        description: >-
+          The object's kind. `base` for the built-in objects (companies, people and deal pipelines),
+          `custom` for objects you create. `computed` is accepted but not used by Heliyos.
+      objectType:
+        type: string
+        description: >-
+          The record type records of this object carry: `company`, `people` and `deals` for the
+          built-in objects. For a custom object it is derived from the name when the object is
+          created (lowercase, spaces replaced by underscores, plus a 4-digit suffix if it is already
+          taken) and never changes afterwards.
+        example: partners
+      icon:
+        type: string
+        description: The icon name the web app shows for the object.
+      iconColor:
+        type: string
+        description: A label colour family for the icon, for example `blue`.
+      viewType:
+        type: string
+        enum: [table, kanban]
+        description: How the web app shows the object by default. Deal pipelines use `kanban`.
+      kanbanConfig:
+        $ref: "#/components/schemas/SchemaKanbanConfig"
+      fields:
+        type: array
+        description: >-
+          The object's fields that you may view, in storage order. Sort by `sequence` for display
+          order. Fields whose permissions hide them from you are left out.
+        items: { $ref: "#/components/schemas/SchemaField" }
+      permissions:
+        $ref: "#/components/schemas/SchemaPermissions"
+      agents:
+        type: array
+        description: Reserved for internal use.
+        items: { type: object, additionalProperties: true }
+      recordCount:
+        type: integer
+        description: >-
+          How many records the object has. Only in a list sent with `isRecordCount=true`.
+      created:
+        type: object
+        description: When the object was created, and by whom.
+        properties:
+          at: { $ref: "#/components/schemas/Timestamp" }
+          by: { type: string, description: "Id of the user who created it, or `system` for built-in objects." }
+      updated:
+        type: object
+        description: When the object was last changed, and by whom.
+        properties:
+          at: { $ref: "#/components/schemas/Timestamp" }
+          by: { type: string, description: Id of the user who last changed it. }
+
+  SchemaKanbanConfig:
+    type: object
+    description: >-
+      The board layout. Each lane is one option of the lane field. Lanes are managed in the web app;
+      changing the lane field's `settings.selectOptions` adds and removes lanes to match.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      laneField:
+        type: string
+        description: The key of the select field whose options are the lanes, for example `stage`.
+      lanes:
+        type: array
+        description: The board's lanes.
+        items:
+          type: object
+          properties:
+            _id: { $ref: "#/components/schemas/ObjectId" }
+            name: { type: string, description: "The lane's name, equal to one option of the lane field." }
+            order: { type: number, description: The lane's position on the board. }
+            color: { type: string, description: "A label colour family, for example `green`." }
+            icon: { type: string, description: An optional icon name. }
+            isVisible: { type: boolean, description: "false when the lane is hidden on the board." }
+
+  SchemaPermissions:
+    type: object
+    description: >-
+      Who may view and edit. With `organization`, every member may. With `private`, only the roles and
+      users listed (and the creator). API keys act with the `ADMIN` role.
+    properties:
+      visibility:
+        type: string
+        description: "`organization` or `private`. Objects also store `public`, which behaves like an allow list of roles and users."
+      editableBy:
+        type: object
+        description: Who may edit when `visibility` is `private`.
+        properties:
+          roles:
+            type: array
+            items: { type: string }
+            description: "Role names: `OWNER`, `ADMIN`, `MEMBER`, `STAFF`, `SUPPORT`, `SUPER_ADMIN`, `AGENCY`."
+          users:
+            type: array
+            items: { $ref: "#/components/schemas/ObjectId" }
+            description: User ids.
+      viewableBy:
+        type: object
+        description: Who may view when `visibility` is `private`.
+        properties:
+          roles:
+            type: array
+            items: { type: string }
+            description: Role names, as in `editableBy`.
+          users:
+            type: array
+            items: { $ref: "#/components/schemas/ObjectId" }
+            description: User ids.
+
+  SchemaFieldType:
+    type: object
+    description: The field's type. See the field types table on Create a field.
+    properties:
+      type:
+        type: string
+        enum: [text, richText, number, currency, rating, checkbox, date, timestamp, select, multiSelect, url, email, phone, user, image, relationship, file]
+        description: >-
+          What the field holds. `file` exists on some fields but cannot be created through the API.
+      enum:
+        type: array
+        items: { type: string }
+        description: >-
+          Related kinds the web app uses for the field's editors, for example `["text", "richText"]`.
+          A list containing `multiSelect` or `array` makes CSV import split values on commas.
+      relationshipSchemaId:
+        type: string
+        description: "`relationship` fields: id of the object the field links to."
+      relationshipConfig:
+        type: array
+        description: "`relationship` fields: how the link maps onto the other object."
+        items:
+          type: object
+          properties:
+            targetSchema: { type: string, description: Id of the linked object. }
+            associatedField: { type: string, description: Key of the matching field on the linked object. }
+            inverseName: { type: string, description: Key of this side of the link. }
+            onDelete:
+              type: string
+              enum: [cascade, setNull, restrict]
+              description: What the link should do when the linked record is deleted. Defaults to `setNull`.
+
+  SchemaFieldSettings:
+    type: object
+    description: Type-specific configuration.
+    properties:
+      selectOptions:
+        type: array
+        description: >-
+          `select` and `multiSelect`: the choices, in order. Each is `{ "value", "color" }` (a label
+          colour family) or a bare string.
+        items:
+          oneOf:
+            - type: string
+            - type: object
+              properties:
+                value: { type: string, description: "The option's text, which is what records store." }
+                color: { type: string, description: "A label colour family: `red`, `orange`, `amber`, `olive`, `green`, `teal`, `blue`, `purple`, `pink` or `gray`." }
+      currencyOptions:
+        type: object
+        description: "`currency`: how the web app formats amounts."
+        properties:
+          currency: { type: string, description: "A two-letter country code whose currency is used, for example `US` for US dollars or `DE` for euros." }
+          display: { type: string, description: "`symbol` ($1,200), `code` (USD 1,200) or `name` (1,200 US Dollar)." }
+      abbreviateNumber:
+        type: boolean
+        description: "`number` and `currency`: show large values as 1.2k, 3.4M and so on."
+      defaultValue:
+        description: >-
+          The value a new record gets when it is created without one (missing, null or an empty
+          string). Must fit the field's type.
+      aiRunStatus:
+        type: string
+        enum: [RUNNING, PENDING, FINISHED, ERROR, ""]
+        description: A display status for an AI column, set by the web app. Heliyos does not update it.
+
+  SchemaField:
+    type: object
+    description: One field of an object.
+    properties:
+      id:
+        type: string
+        pattern: "^[0-9a-fA-F]{24}$"
+        description: The field's id. Use it as `fieldId` to change or delete the field.
+        example: 6730c2d5e4f6a7b8c9d0e1f2
+      _id:
+        type: string
+        description: An internal id some responses include. Address the field by `id`.
+      name:
+        type: string
+        description: The field's key, which records use in `data` and filters name, for example `contract_value`.
+      displayName:
+        type: string
+        description: The label shown in the web app.
+      description:
+        type: string
+        description: What the field holds. Shown in the web app and read by workers.
+      icon:
+        type: string
+        description: The icon name the web app shows next to the label.
+      sequence:
+        type: number
+        description: The field's position in the object, starting at 1.
+      type: { $ref: "#/components/schemas/SchemaFieldType" }
+      settings: { $ref: "#/components/schemas/SchemaFieldSettings" }
+      isAIEnabled:
+        type: boolean
+        description: "true when workers fill the field from `aiPrompt` (an AI column)."
+      aiPrompt:
+        type: object
+        nullable: true
+        description: The AI column's prompt.
+        properties:
+          prompt: { type: string, description: The instructions workers follow to fill the field. }
+          variables: { type: array, items: { type: string }, description: Names of the fields the prompt mentions. }
+      isHiddenField:
+        type: boolean
+        description: "true when the field is hidden from table views by default."
+      isVisibleOnlyInPage:
+        type: boolean
+        description: "true when the field shows only on the record page, not in tables."
+      isReadOnly:
+        type: boolean
+        description: "true when the web app shows the field as read-only. The API does not enforce it."
+      required:
+        type: boolean
+        description: "true when creating a record without this key fails."
+      unique:
+        type: boolean
+        description: Shown in the web app. The API does not enforce uniqueness on record writes.
+      validation:
+        type: object
+        description: Rules checked when a record is written.
+        properties:
+          rules:
+            type: array
+            items:
+              type: object
+              properties:
+                type: { type: string, description: The rule. See `validation` on Create a field. }
+                value: { description: The rule's argument. }
+                message: { type: string, description: A message for people editing the record. }
+      default:
+        type: object
+        description: A stored default. Records are not filled from it; `settings.defaultValue` does that.
+        properties:
+          type: { type: string, enum: [static, dynamic] }
+          value: { description: The default value. }
+      permissions: { $ref: "#/components/schemas/SchemaPermissions" }
+      hasAccess:
+        type: boolean
+        description: Present in lists. Always true, because fields you may not view are left out.
+      metadata: { $ref: "#/components/schemas/AuditMetadata" }
+
+x-field-body:
+  type: &fieldType
+    type: object
+    required: [type]
+    description: >-
+      The field's type. `type.type` is required; send the rest as the web app does (see the field
+      types table).
+    properties:
+      type:
+        type: string
+        enum: [text, richText, number, currency, rating, checkbox, date, timestamp, select, multiSelect, url, email, phone, user, image, relationship]
+        description: The field type. Any other value is refused with 400.
+      enum:
+        type: array
+        items: { type: string }
+        description: >-
+          Related kinds for the web app's editors, for example `["text", "richText"]` for `text`.
+          Send the value in the field types table.
+      relationshipSchemaId:
+        type: string
+        description: "`relationship` only: id of the object to link to."
+      relationshipConfig:
+        type: array
+        description: >-
+          `relationship` only: how the link maps onto the other object. Stored on this object only;
+          the matching field on the other object is not created or changed.
+        items:
+          type: object
+          required: [targetSchema, associatedField, inverseName]
+          additionalProperties: false
+          properties:
+            targetSchema: { type: string, description: Id of the linked object. }
+            associatedField: { type: string, description: Key of the matching field on the linked object. }
+            inverseName: { type: string, description: Key of this side of the link. }
+            onDelete:
+              type: string
+              enum: [cascade, setNull, restrict]
+              description: What the link should do when the linked record is deleted. Defaults to `setNull`.
+  displayName: &fieldDisplayName
+    type: string
+    description: The label shown in the web app, for example `Contract value`. May be empty.
+  icon: &fieldIcon
+    type: string
+    description: An icon name from the web app's icon set.
+  description: &fieldDescription
+    type: string
+    description: What the field holds. Shown in the web app and read by workers.
+  isAIEnabled: &fieldIsAIEnabled
+    type: boolean
+    description: >-
+      true makes the field an AI column that workers fill from `aiPrompt`. The web app offers it for
+      `text`, `richText`, `number`, `date`, `select`, `multiSelect` and `checkbox`. Turning it on or
+      off resets each record's AI status for the field; stored values are kept.
+  isHiddenField: &fieldIsHidden
+    type: boolean
+    description: true hides the field from table views by default. Default false.
+  required: &fieldRequired
+    type: boolean
+    description: >-
+      true makes creating a record without this key fail with 400. An empty string or null still
+      counts as a value, and record updates are not checked. Default false.
+  unique: &fieldUnique
+    type: boolean
+    description: Shown in the web app. The API does not enforce uniqueness on record writes. Default false.
+  aiPrompt: &fieldAiPrompt
+    type: object
+    additionalProperties: false
+    description: The AI column's prompt.
+    properties:
+      prompt: { type: string, description: The instructions workers follow to fill the field. }
+      variables:
+        type: array
+        items: { type: string }
+        description: Names of the fields the prompt mentions. Send `[]` when it mentions none.
+  validation: &fieldValidation
+    type: object
+    additionalProperties: false
+    description: >-
+      Rules checked whenever a record writes this field. Values already stored are not re-checked.
+    properties:
+      rules:
+        type: array
+        maxItems: 20
+        description: |
+          Up to 20 rules, each `{ "type", "value", "message" }`. Rule types:
+          - `minLength`, `maxLength`: string length, `value` a number.
+          - `pattern`: a regular expression the value must match, `value` a string of at most 200
+            characters. A pattern that is invalid or could take exponential time (nested repetition
+            such as `(a+)+`) is refused with 400.
+          - `email`: the value must be an email address (`value` is ignored).
+          - `min`, `max`: number bounds, `value` a number.
+
+          Other rule types are stored but not checked. Use string rules on text-like types and `min`
+          and `max` on number types.
+        items:
+          type: object
+          required: [type, value, message]
+          additionalProperties: false
+          properties:
+            type: { type: string, description: "`minLength`, `maxLength`, `pattern`, `email`, `min` or `max`." }
+            value: { description: The rule's argument. }
+            message: { type: string, description: A message for people editing the record. }
+  default: &fieldDefault
+    type: object
+    required: [type, value]
+    additionalProperties: false
+    description: >-
+      A default stored with the field. Records are not filled from it; use `settings.defaultValue`
+      for that.
+    properties:
+      type: { type: string, enum: [static, dynamic], description: "`static` or `dynamic`." }
+      value: { description: The default value. }
+  settings: &fieldSettings
+    type: object
+    additionalProperties: false
+    description: Type-specific configuration. See the field types table for which keys apply.
+    properties:
+      selectOptions:
+        type: array
+        description: >-
+          `select` and `multiSelect`: the choices, in order. Each is `{ "value", "color" }` or a bare
+          string. Colours are label families: `red`, `orange`, `amber`, `olive`, `green`, `teal`,
+          `blue`, `purple`, `pink`, `gray`. Values are stored as sent; keep them unique.
+        items:
+          oneOf:
+            - type: string
+            - type: object
+              required: [value, color]
+              additionalProperties: false
+              properties:
+                value: { type: string, description: "The option's text, which is what records store." }
+                color: { type: string, description: A label colour family. }
+      currencyOptions:
+        type: object
+        additionalProperties: false
+        description: "`currency`: how the web app formats amounts."
+        properties:
+          currency: { type: string, description: "A two-letter country code whose currency is used, for example `US` for US dollars." }
+          display: { type: string, description: "`symbol`, `code` or `name`." }
+      defaultValue:
+        description: >-
+          The value a new record gets when it is created without one (missing, null or an empty
+          string). Must fit the field's type, or record creation fails.
+      aiRunStatus:
+        type: string
+        enum: [RUNNING, PENDING, FINISHED, ERROR, ""]
+        description: A display status for an AI column. The web app sends `PENDING` when it saves an AI column without running it.
+      abbreviateNumber:
+        type: boolean
+        description: "`number` and `currency`: show large values as 1.2k, 3.4M and so on."
+  permissions: &fieldPermissions
+    type: object
+    required: [visibility, editableBy, viewableBy]
+    additionalProperties: false
+    description: >-
+      Who may view and edit the field. With `organization`, every member who can see the object may.
+      With `private`, only the listed roles and users. Send both `roles` and `users` in each list.
+    properties:
+      visibility:
+        type: string
+        enum: [private, organization]
+        description: "`organization` or `private`."
+      editableBy:
+        type: object
+        additionalProperties: false
+        description: Who may edit the field when it is private.
+        properties:
+          roles:
+            type: array
+            items: { type: string }
+            description: "Role names: `OWNER`, `ADMIN`, `MEMBER`, `STAFF`, `SUPPORT`, `SUPER_ADMIN`, `AGENCY`."
+          users: { type: array, items: { type: string }, description: User ids. }
+      viewableBy:
+        type: object
+        additionalProperties: false
+        description: Who may view the field when it is private.
+        properties:
+          roles: { type: array, items: { type: string }, description: "Role names, as in `editableBy`." }
+          users: { type: array, items: { type: string }, description: User ids. }
+
+x-examples:
+  permissions: &examplePermissions
+    visibility: organization
+    editableBy: { roles: [OWNER, ADMIN, MEMBER, STAFF, SUPPORT, SUPER_ADMIN], users: [] }
+    viewableBy: { roles: [OWNER, ADMIN, MEMBER, STAFF, SUPPORT, SUPER_ADMIN], users: [] }
+  fieldMetadata: &exampleFieldMetadata
+    created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+  stageField: &exampleStageField
+    id: 6730c2d5e4f6a7b8c9d0e1f2
+    sequence: 4
+    name: partner_tier
+    displayName: Partner tier
+    description: Commercial tier agreed in the partner contract.
+    icon: PiMedal
+    type: { type: select, enum: [select], relationshipConfig: [] }
+    settings:
+      selectOptions:
+        - { value: Gold, color: amber }
+        - { value: Silver, color: gray }
+        - { value: Registered, color: blue }
+    isAIEnabled: false
+    isHiddenField: false
+    isReadOnly: false
+    isVisibleOnlyInPage: false
+    required: false
+    unique: false
+    validation: { rules: [] }
+    permissions: *examplePermissions
+    metadata: *exampleFieldMetadata
+  partnersObject: &examplePartnersObject
+    id: 6730b1c4d3e5f6a7b8c9d0e1
+    organizationId: 66a0f1e2d3c4b5a697887766
+    name: Partners
+    slug: partners
+    description: Resellers and referral partners.
+    type: custom
+    objectType: partners
+    icon: PiHandshake
+    viewType: table
+    kanbanConfig: { _id: 6730b1c4d3e5f6a7b8c9d0e2, lanes: [] }
+    fields:
+      - id: 6730b1c4d3e5f6a7b8c9d0e3
+        sequence: 1
+        name: partners
+        displayName: Partners
+        icon: PiHandshake
+        type: { type: text, enum: [text, longText, richText], relationshipConfig: [] }
+        aiPrompt: { prompt: "", variables: [] }
+        isAIEnabled: false
+        isHiddenField: false
+        isReadOnly: false
+        isVisibleOnlyInPage: false
+        required: false
+        unique: false
+        validation: { rules: [] }
+        permissions: *examplePermissions
+        metadata: *exampleFieldMetadata
+    agents: []
+    permissions: *examplePermissions
+    created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+
+operations:
+  listBaseSchemas:
+    summary: List objects
+    description: |
+      Returns every object (base schema) in the workspace that you may view, with its fields, oldest
+      first: companies, people, each deal pipeline and your custom objects. The list is not paginated;
+      a workspace has a handful of objects.
+
+      Use it to find an object's `id` (records call it `schemaId`) and its field keys. Fields whose
+      permissions hide them from you are left out of each object.
+    parameters:
+      isRecordCount:
+        description: >-
+          true adds `recordCount` (the number of records) to each object. Counting takes longer on
+          large workspaces. Defaults to false.
+        example: true
+    response:
+      description: All objects you may view.
+      message: Schemas retrieved successfully
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/SchemaObject" }
+      example:
+        - id: 66a0f1e2d3c4b5a697880001
+          organizationId: 66a0f1e2d3c4b5a697887766
+          name: Company
+          slug: company
+          description: Master data for companies
+          type: base
+          objectType: company
+          viewType: table
+          fields:
+            - id: 674af8e0017b924c5d1d69b2
+              sequence: 1
+              name: company_name
+              displayName: Company
+              type: { type: relationship, enum: [relationship, text] }
+              required: true
+              isAIEnabled: false
+              isHiddenField: false
+              permissions: *examplePermissions
+              hasAccess: true
+          permissions: *examplePermissions
+          recordCount: 412
+          created: { at: "2026-01-12T08:00:00.000Z", by: system }
+          updated: { at: "2026-10-02T14:21:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+        - id: 6730b1c4d3e5f6a7b8c9d0e1
+          organizationId: 66a0f1e2d3c4b5a697887766
+          name: Partners
+          slug: partners
+          type: custom
+          objectType: partners
+          viewType: table
+          fields:
+            - id: 6730c2d5e4f6a7b8c9d0e1f2
+              sequence: 4
+              name: partner_tier
+              displayName: Partner tier
+              type: { type: select, enum: [select] }
+              settings: { selectOptions: [{ value: Gold, color: amber }, { value: Silver, color: gray }] }
+              required: false
+              isAIEnabled: false
+              isHiddenField: false
+              permissions: *examplePermissions
+              hasAccess: true
+          permissions: *examplePermissions
+          recordCount: 18
+          created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+
+  getBaseSchema:
+    summary: Get an object
+    description: |
+      Returns one object (base schema) with its fields. Fields whose permissions hide them from you
+      are left out.
+
+      This response names the object's id `_id`, where list, create and update name it `id`.
+    parameters:
+      id:
+        description: The object's id.
+        example: 6730b1c4d3e5f6a7b8c9d0e1
+    response:
+      description: The object.
+      message: Base schema retrieved successfully
+      data: { $ref: "#/components/schemas/SchemaObject" }
+      example:
+        _id: 6730b1c4d3e5f6a7b8c9d0e1
+        organizationId: 66a0f1e2d3c4b5a697887766
+        name: Partners
+        slug: partners
+        description: Resellers and referral partners.
+        type: custom
+        objectType: partners
+        icon: PiHandshake
+        viewType: table
+        kanbanConfig: { _id: 6730b1c4d3e5f6a7b8c9d0e2, lanes: [] }
+        fields:
+          - *exampleStageField
+        agents: []
+        permissions: *examplePermissions
+        created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+        updated: { at: "2026-11-04T09:31:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "403": "FORBIDDEN_ACTION: the object is private and you are not on its view list."
+      "404": "NOT_FOUND: no object with this id in the workspace."
+
+  createBaseSchemaField:
+    summary: Create a field
+    description: |
+      Adds a field to an object (base schema). Every existing record gets an empty value for the new
+      field. The response is the new field, not the whole object.
+
+
+      `type.type` decides what records can store. Send the `type` object shown, as the web app does.
+      Every type also accepts `""` or `null` as no value.
+
+      | `type.type` | Records store | Send as `type` | Extra configuration |
+      |---|---|---|---|
+      | `text` | A string, trimmed. | `{"type":"text","enum":["text","richText"]}` | None |
+      | `richText` | A string of formatted text. | `{"type":"richText","enum":["richText","text"]}` | None |
+      | `number` | A number. | `{"type":"number","enum":["number"]}` | `settings.abbreviateNumber` |
+      | `currency` | A number, the amount. | `{"type":"currency","enum":["number"]}` | `settings.currencyOptions`, `settings.abbreviateNumber` |
+      | `rating` | A number. The web app shows 1 to 5 stars; the API does not limit it. | `{"type":"rating","enum":["number"]}` | None |
+      | `checkbox` | `true` or `false`. | `{"type":"checkbox","enum":["boolean"]}` | None |
+      | `date` | A date, sent as an ISO 8601 string. | `{"type":"date","enum":["date","timestamp"]}` | None |
+      | `timestamp` | A date and time, sent as an ISO 8601 string. | `{"type":"timestamp","enum":["timestamp","date"]}` | None |
+      | `select` | One string. | `{"type":"select","enum":["select"]}` | `settings.selectOptions` |
+      | `multiSelect` | An array of strings. | `{"type":"multiSelect","enum":["multiSelect"]}` | `settings.selectOptions` |
+      | `url` | A URL. Must parse as a URI. | `{"type":"url","enum":["text"]}` | None |
+      | `email` | An email address. Must be valid. | `{"type":"email","enum":["text"]}` | None |
+      | `phone` | A string. The format is not checked. | `{"type":"phone","enum":["text"]}` | None |
+      | `user` | An array of workspace members. The web app stores `{ "id", "name", "email" }` per member, `id` being the user id. | `{"type":"user","enum":["user"]}` | None |
+      | `image` | An object. | `{"type":"image","enum":["text"]}` | None |
+      | `relationship` | Links to records of another object. | `{"type":"relationship","enum":["relationship"], ...}` | `type.relationshipSchemaId`, `type.relationshipConfig` |
+
+      Record writes check a `select` value is a string and a `multiSelect` value is an array; they do
+      not check them against `settings.selectOptions`. Relationship fields are best created in the web
+      app, which sets up both sides of the link; this endpoint stores the configuration on this object
+      only. `file` fields cannot be created through the API.
+
+
+      With `isAIEnabled: true` and an `aiPrompt`, workers fill the field. Send `runImmediately: true`
+      to start filling every record of the object straight away. That run uses credits for each
+      record it processes.
+
+
+      See Update a field for what can change after creation
+      and what each change does to stored values.
+    content: |
+      <Warning>
+      Pick a key (`name`) the object does not already use. The API does not refuse a duplicate key:
+      the request succeeds without adding a field, and the existing field's value is cleared to an
+      empty string on every record. Read the object's fields first.
+      </Warning>
+    parameters:
+      id:
+        description: The object's id.
+        example: 6730b1c4d3e5f6a7b8c9d0e1
+    requestBody:
+      schema:
+        type: object
+        required: [name, type, permissions]
+        properties:
+          name:
+            type: string
+            minLength: 1
+            maxLength: 100
+            description: >-
+              The field's key: what records use in `data` and filters name. 1 to 100 characters. Use
+              lowercase letters, digits and underscores, starting with a letter, for example
+              `partner_tier`. The API does not check the format yet, but keys with dots or `$`
+              do not work in filters and updates, so avoid them. Must be new on the object (see the warning).
+            example: partner_tier
+          type: *fieldType
+          displayName: *fieldDisplayName
+          sequence:
+            type: number
+            description: >-
+              The field's position, starting at 1. To append, send the highest `sequence` on the
+              object plus 1, as the web app does. Stored as sent.
+            example: 4
+          icon: *fieldIcon
+          description: *fieldDescription
+          isAIEnabled: *fieldIsAIEnabled
+          isHiddenField: *fieldIsHidden
+          required: *fieldRequired
+          unique: *fieldUnique
+          aiPrompt: *fieldAiPrompt
+          validation: *fieldValidation
+          default:
+            <<: *fieldDefault
+            description: >-
+              A default stored with the field. `value` must fit the field's type, or the request
+              fails with 400. Records are not filled from it; use `settings.defaultValue` for that.
+          settings: *fieldSettings
+          permissions:
+            <<: *fieldPermissions
+            description: >-
+              Required. Who may view and edit the field. With `organization`, every member who can see
+              the object may. With `private`, only the listed roles and users. Send both `roles` and
+              `users` in each list. The web app's default lists every role.
+          runImmediately:
+            type: boolean
+            description: >-
+              With `isAIEnabled: true`, starts a worker run now that fills this field on every record
+              of the object. It uses credits for each record processed. Default false.
+      examples:
+        select:
+          summary: A select field
+          value:
+            name: partner_tier
+            displayName: Partner tier
+            description: Commercial tier agreed in the partner contract.
+            sequence: 4
+            type: { type: select, enum: [select] }
+            settings:
+              selectOptions:
+                - { value: Gold, color: amber }
+                - { value: Silver, color: gray }
+                - { value: Registered, color: blue }
+            permissions: *examplePermissions
+        currency:
+          summary: A currency field
+          value:
+            name: contract_value
+            displayName: Contract value
+            sequence: 5
+            type: { type: currency, enum: [number] }
+            settings:
+              currencyOptions: { currency: US, display: symbol }
+              abbreviateNumber: true
+            validation:
+              rules:
+                - { type: min, value: 0, message: Contract value cannot be negative. }
+            permissions: *examplePermissions
+        aiColumn:
+          summary: An AI column
+          value:
+            name: partner_fit
+            displayName: Partner fit
+            sequence: 6
+            type: { type: richText, enum: [richText, text] }
+            isAIEnabled: true
+            aiPrompt:
+              prompt: Summarise how well this partner's customer base matches our ideal customer profile.
+              variables: []
+            permissions: *examplePermissions
+            runImmediately: false
+    response:
+      status: 201
+      description: The new field.
+      message: Schema attribute added successfully
+      specMismatch: The API answers with this status; the published spec still says 200.
+      data: { $ref: "#/components/schemas/SchemaField" }
+      example: *exampleStageField
+    errors:
+      "400": >-
+        VALIDATION_FAILED: a required property is missing, `type.type` is not a supported type,
+        `default.value` does not fit the type, `permissions` is incomplete, a `pattern` rule is
+        unsafe, or the field could not be added.
+      "403": "FORBIDDEN_ACTION: you may not edit this object."
+      "404": "NOT_FOUND: no object with this id in the workspace."
+
+  updateBaseSchemaField:
+    summary: Update a field
+    description: |
+      Changes one field of an object (base schema). Send at least one property; properties you leave
+      out are kept. Each property you send replaces the stored one completely: `settings`, `type`,
+      `permissions`, `validation`, `aiPrompt` and `default` are not merged, so send the whole object.
+      The response is the whole object with all of its fields.
+
+
+      | Change | Effect on records |
+      |---|---|
+      | `displayName`, `description`, `icon`, `isHiddenField`, `unique` | Display only. |
+      | `required`, `validation` | Apply to later record writes. Stored values are not re-checked. |
+      | `settings.selectOptions` | Replaces the options. Records holding a removed option keep it. On a board's lane field, lanes are added and removed to match. |
+      | `settings` (any key) | Replaces all settings: include the keys you want to keep. |
+      | `sequence` | Moves the field to that position (starting at 1); the fields in between shift by one. |
+      | `isAIEnabled` | Turns the AI column on or off and resets each record's AI status. Stored values are kept. |
+      | `type` | Refused with 400 while any record of the object holds a value for the field, including the empty value every record gets when a field is added. When accepted, stored values are not converted. |
+      | `name` (the key) | Values are not moved. See the warning. |
+      | `permissions` | Replaces who may view and edit the field. |
+    content: |
+      <Warning>
+      Changing `name` changes the field's key but leaves every record's value under the old key,
+      where no field reads it, so the values stop showing. The API does not check that the new key is
+      free either. Treat the key as fixed and change `displayName` instead.
+      </Warning>
+    parameters:
+      id:
+        description: The object's id.
+        example: 6730b1c4d3e5f6a7b8c9d0e1
+      fieldId:
+        description: The field's `id`, from Get an object.
+        example: 6730c2d5e4f6a7b8c9d0e1f2
+    requestBody:
+      schema:
+        type: object
+        minProperties: 1
+        properties:
+          name:
+            type: string
+            minLength: 1
+            maxLength: 100
+            description: A new key, 1 to 100 characters. Stored values are not moved (see the warning).
+          type:
+            <<: *fieldType
+            description: >-
+              A new type, replacing the current `type` object. Refused while records hold values for
+              the field (see the table). Must be a type Heliyos knows, or the request fails with 400.
+          displayName: *fieldDisplayName
+          sequence:
+            type: number
+            description: >-
+              A new position, 1 or more. The field moves there and the fields in between shift by one.
+              Less than 1 is refused with 400.
+          icon: *fieldIcon
+          description: *fieldDescription
+          isAIEnabled: *fieldIsAIEnabled
+          isHiddenField: *fieldIsHidden
+          required: *fieldRequired
+          unique: *fieldUnique
+          aiPrompt: *fieldAiPrompt
+          validation: *fieldValidation
+          default: *fieldDefault
+          settings:
+            <<: *fieldSettings
+            description: >-
+              Replaces all of the field's settings. Include every key you want to keep, for example the
+              current `currencyOptions` when you change `abbreviateNumber`.
+          permissions: *fieldPermissions
+          runImmediately:
+            type: boolean
+            description: >-
+              true starts a worker run now that fills this field on every record of the object, using
+              credits for each record. It only runs when the field was already an AI column before this
+              request; to turn on AI and run, send two requests. Default false.
+      examples:
+        relabel:
+          summary: Rename the label
+          value:
+            displayName: Partner level
+        options:
+          summary: Replace the options
+          value:
+            settings:
+              selectOptions:
+                - { value: Gold, color: amber }
+                - { value: Silver, color: gray }
+                - { value: Bronze, color: orange }
+                - { value: Registered, color: blue }
+        move:
+          summary: Move the field to position 2
+          value:
+            sequence: 2
+    response:
+      description: The whole object, with the updated field.
+      message: Schema attribute updated successfully
+      data: { $ref: "#/components/schemas/SchemaObject" }
+      example:
+        <<: *examplePartnersObject
+        fields:
+          - id: 6730b1c4d3e5f6a7b8c9d0e3
+            sequence: 1
+            name: partners
+            displayName: Partners
+            type: { type: text, enum: [text, longText, richText], relationshipConfig: [] }
+            isAIEnabled: false
+            isHiddenField: false
+            required: false
+            permissions: *examplePermissions
+          - id: 6730c2d5e4f6a7b8c9d0e1f2
+            sequence: 4
+            name: partner_tier
+            displayName: Partner level
+            type: { type: select, enum: [select], relationshipConfig: [] }
+            settings:
+              selectOptions:
+                - { value: Gold, color: amber }
+                - { value: Silver, color: gray }
+                - { value: Registered, color: blue }
+            isAIEnabled: false
+            isHiddenField: false
+            required: false
+            permissions: *examplePermissions
+            metadata:
+              created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+              updated: { at: "2026-11-05T10:12:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": >-
+        VALIDATION_FAILED: the body is empty or invalid, `sequence` is less than 1, the new type is
+        unknown, records hold values for the field during a type change ("Cannot change field type"),
+        or the field could not be updated. Nothing is written.
+      "403": "FORBIDDEN_ACTION: you may not edit this field."
+      "404": "NOT_FOUND: no object with this id in the workspace, or no field with this id on it."
+
+  deleteBaseSchemaField:
+    summary: Delete a field
+    description: |
+      Deletes one field of an object (base schema) and removes its value from every record,
+      permanently.
+
+      The API does not protect any field: built-in fields such as a company's `company_name`, the
+      field a board's lanes come from, and relationship fields are deleted like any other. Deleting a
+      relationship field leaves the matching field on the other object unchanged.
+    content: |
+      <Warning>
+      This removes the field and its value on every record of the object. It cannot be undone.
+      </Warning>
+    parameters:
+      id:
+        description: The object's id.
+        example: 6730b1c4d3e5f6a7b8c9d0e1
+      fieldId:
+        description: The field's `id`, from Get an object.
+        example: 6730c2d5e4f6a7b8c9d0e1f2
+    response:
+      description: The field and its values were deleted. `data` is an empty object.
+      message: Schema attribute deleted successfully
+      empty: true
+    errors:
+      "403": "FORBIDDEN_ACTION: you may not edit this field."
+      "404": "NOT_FOUND: no object with this id in the workspace, or no field with this id on it."

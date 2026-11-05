@@ -1,0 +1,46 @@
+---
+title: "Workers and review"
+description: "How workers take on work through the API, and how review keeps your team in control."
+---
+
+A **worker** is an AI colleague in your workspace. Every workspace starts with Taylor, the AI account executive (follow-ups, proposals, scheduling), and Parker, the AI platform admin (keeps company, people and deal records current after every email and meeting). Custom workers take any role you describe in plain words. Workers appear where your team works: as task assignees, in Ask Heliyos, and as the actor on the changes they make.
+
+## What workers know
+
+Workers read your workspace's **knowledge base** on every run: the business context, your products, the pain points they solve, your value proposition, what makes a lead worth pursuing, and any custom entries your team adds, such as pricing or competitors. Read and change it with [Get the knowledge base](/api-reference/knowledge-base/get-the-knowledge-base) and [Update the knowledge base](/api-reference/knowledge-base/update-the-knowledge-base). Files your workers read are [files](/api-reference/files/list-files) with kind `knowledge_base`.
+
+## Three ways to start work
+
+| Start | Endpoint | Use it when |
+| --- | --- | --- |
+| Ask Heliyos | [Ask Heliyos](/api-reference/workers-and-runs/ask-heliyos) | You have a question or a job in plain language. Heliyos plans it and calls the right workers. |
+| Run a task | [Run workers on a task](/api-reference/tasks/run-workers-on-a-task) | The work is a task in Heliyos, with its own context and links. |
+| Triggers | [Create a worker](/api-reference/workers-and-runs/create-a-worker) | A worker should act on events (a record changed, an email arrived) or on a schedule. |
+
+Each start creates a **run**. Follow it with [Get a run](/api-reference/workers-and-runs/get-a-run), which can wait up to 30 seconds for a change, or list runs with [List runs](/api-reference/workers-and-runs/list-runs).
+
+## Run lifecycle
+
+```text
+queued ──► running ──► completed
+               │
+               ├──► awaiting_approval ──(a person approves or rejects in Heliyos)──► running
+               ├──► paused / waiting / scheduled
+               └──► failed
+```
+
+- `queued` and `running` move on their own. Poll them.
+- `awaiting_approval`, `paused`, `waiting` and `scheduled` wait on a person or a time. Polling will not move them.
+- `completed` carries the result in `output`. `failed` carries an `error`.
+
+## Review keeps people in control
+
+Consequential actions, such as sending an email or changing a deal, wait for approval unless your workspace's autopilot settings allow them. The run shows `awaiting_approval` and lists what is waiting in `reviews`. A person approves or rejects in Heliyos, with the worker's evidence and reasoning next to the action. The API can list reviews and [approve or reject one](/api-reference/reviews/approve-or-reject-a-review), so give that power only to systems your team trusts to decide.
+
+## Credits
+
+Runs that call custom workers use credits. Built-in workers and the planning step are free. Check usage with [List credit usage](/api-reference/workspace/list-credit-usage). When the workspace is out of credits, starting a task run answers `409 CONFLICT`.
+
+<Warning>
+  Starting a run makes workers act in your workspace. Start with review on, and widen autopilot only after you trust a worker with a kind of action.
+</Warning>

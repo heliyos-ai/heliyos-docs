@@ -1,0 +1,29 @@
+---
+title: "Configuration"
+description: "Environment variables and the tool timeout the MCP server needs."
+---
+
+## Environment variables
+
+| Variable | Required | Default | What it does |
+| --- | --- | --- | --- |
+| `HELIYOS_API_KEY` | Yes | None | Your Heliyos API key. It must start with `heliyos_`. |
+| `HELIYOS_BASE_URL` | No | `https://api-prod.heliyos.ai` | The Heliyos API to call. It must use HTTPS. |
+
+## Tool timeout
+
+`heliyos_ask` waits up to 90 seconds for Heliyos to answer, so give tool calls at least 120 seconds.
+
+| Client | Setting |
+| --- | --- |
+| Codex | `tool_timeout_sec = 120` in `[mcp_servers.heliyos]` (the default is 60). A plugin installed from a marketplace keeps the 60 second default; use the `config.toml` setup for 120. |
+| Claude Code | The default is long enough. If you set `MCP_TOOL_TIMEOUT`, keep it at `120000` or more. |
+| Claude Desktop, Cursor, VS Code, Antigravity | No documented setting. |
+
+When a client cuts a call short, the run keeps going in Heliyos. Find it with `heliyos_runs_list` and follow it with `heliyos_runs_get` and `wait: true`, which waits up to 30 seconds per call.
+
+A rate-limited request (HTTP 429) is retried once after the `Retry-After` delay, capped at 30 seconds, so a `heliyos_ask` that hits the limit can take about 125 seconds. If you see timeouts near the limit, raise the timeout to 150 seconds.
+
+## Response size
+
+Reads take `response_format`: `concise` (the default) returns a short summary, `detailed` returns everything. Lists take `limit` (1 to 100) and `cursor`. Large answers are cut with a note telling the agent how to ask for less.

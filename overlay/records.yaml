@@ -1,0 +1,651 @@
+tag:
+  name: Records
+  icon: /icons/app-company.svg
+  order: 30
+  description: >-
+    Records are the rows of an object (base schema): companies, people, deals and custom objects.
+    A record holds field values keyed by the object's field keys and links to other records.
+
+components:
+  RecordRelationship:
+    type: object
+    description: A link from this record to another record in the workspace.
+    properties:
+      _id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: Id of the link itself.
+      objectId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: Id of the linked record.
+      schemaId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: Id of the linked record's object.
+      objectType:
+        type: string
+        description: "The linked record's object type: `company`, `people`, `deals` or a custom object's type."
+        example: company
+      data:
+        type: object
+        additionalProperties: true
+        description: >-
+          List responses only: the linked record's field values. Empty when the linked record no longer
+          exists, and absent when the list was requested with `"enrich": false`.
+      fullData:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: Get responses only. The complete linked record, in the same shape as `Record`.
+
+  Record:
+    type: object
+    description: >-
+      One record. Which properties are present depends on the endpoint: list responses add activity
+      counts, the get response adds `id`, `notes` and `tasks`.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      id:
+        type: string
+        description: Get responses only. The record's id as a string, the same as `_id`.
+      baseSchemaId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The object the record belongs to.
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the record belongs to.
+      objectType:
+        type: string
+        description: "The object's type: `company`, `people`, `deals` or a custom object's type."
+        example: deals
+      data:
+        type: object
+        additionalProperties: true
+        description: >-
+          The field values, keyed by the object's field keys. In list and get responses `data` holds only
+          the object's fields, and a field you may not view is `null`. Create and update responses return
+          the values as stored.
+      relationships:
+        type: array
+        description: The records this record is linked to.
+        items: { $ref: "#/components/schemas/RecordRelationship" }
+      enrichmentStatus:
+        type: string
+        nullable: true
+        enum: [NOT_ENRICHED, STARTED, FINISHED, FAILED]
+        description: >-
+          Companies and people only. `NOT_ENRICHED` on create, `STARTED` while an enrichment runs,
+          `FINISHED` or `FAILED` after it.
+      enrichmentDate:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: When the record was last enriched, or null.
+      isAgentAssigned:
+        type: boolean
+        description: "`true` when a worker watches the record (the record is on the watchlist)."
+      agentAssignmentStatus:
+        type: string
+        nullable: true
+        description: "`STARTED` while a newly assigned worker is setting up, otherwise null or absent."
+      aiColumnStatus:
+        type: object
+        additionalProperties: { type: string }
+        description: The run status of each AI field on this record, keyed by field key, for example `NOT_STARTED`.
+      hubspotId:
+        type: string
+        description: The record's HubSpot id, when the workspace syncs it to HubSpot. Not in list responses.
+      workspaceFolder:
+        type: string
+        description: The record's folder in the worker workspace, when one exists. Not in list responses.
+      commentCount:
+        type: integer
+        description: 'List responses only. Open comment threads linked to the record. 0 with `"enrich": false`.'
+      noteCount:
+        type: integer
+        description: 'List responses only. Notes linked to the record. 0 with `"enrich": false`.'
+      taskCount:
+        type: integer
+        description: 'List responses only. Unfinished tasks linked to the record. 0 with `"enrich": false`.'
+      notes:
+        type: array
+        description: Get responses only. Every note linked to the record, newest first.
+        items: { type: object, additionalProperties: true }
+      tasks:
+        type: array
+        description: Get responses only. Every task linked to the record, newest first.
+        items: { type: object, additionalProperties: true }
+      metadata: { $ref: "#/components/schemas/AuditMetadata" }
+
+  RecordKanbanColumn:
+    type: object
+    description: >-
+      One column of a board, returned by List records when `filters` has `"viewType": "kanban"`.
+    properties:
+      columnId:
+        description: The grouping field's value shared by the column's records, or `uncategorized` when they have none.
+      items:
+        type: array
+        description: >-
+          Every matching record with this value. Items carry `_id`, `baseSchemaId`, `organizationId`,
+          `objectType`, `data`, `metadata`, `relationships` and the three activity counts.
+        items: { $ref: "#/components/schemas/Record" }
+      pagination:
+        type: object
+        description: "Always one page: `{ page: 1, limit, totalPages: 1, count, hasMore: false }`, where `limit` and `count` are the column's size."
+        additionalProperties: true
+
+  RecordLookupRow:
+    type: object
+    description: A compact entry for one record, for local name search.
+    properties:
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The record's id.
+      name:
+        type: string
+        description: >-
+          The record's display name: the first non-empty text value among the object's first field (by
+          position) and `company_name`, `people_name`, `deal_name`, `name`, `title`, using only fields you
+          may view. Empty when none has a value.
+      secondary:
+        type: string
+        description: >-
+          A supporting value: the first of `domain`, `email`, `job_title` or `stage` that the object has and
+          you may view. Absent when that field is empty or not text.
+      imageUrl:
+        type: string
+        description: The `logo` or `profile_pic` value, when the object has one of them and it is set.
+      isWatched:
+        type: boolean
+        description: "`true` when a worker watches the record."
+      updatedAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the record last changed.
+
+operations:
+  listRecords:
+    summary: List records
+    description: |
+      Returns the records of one object (base schema), such as your companies, people, deals or a custom
+      object. Get the object's id and its field keys from the Objects endpoints.
+
+      Each record's `data` holds only the object's fields. A field you may not view comes back as `null`.
+      Every record also carries its links in `relationships` (each with the linked record's field values in
+      `data`) and counts of linked comments, notes and open tasks.
+
+      **Paging.** There are two modes.
+
+      - **Cursor (default).** Send `limit` (1 to 100, default 20). Records come newest first (by creation).
+        When `meta.pagination.next_cursor` is present, send it back as `cursor` for the next page.
+      - **Page number.** Used as soon as you send `page` (query or `filters`), `filters.pageSize`, a
+        `filters.sort` or a board (`"viewType": "kanban"`). Without a sort, records come most recently
+        updated first. `meta.pagination` is `{ page, limit, totalPages, count, hasMore }`, where `count` is
+        the number of matching records and `limit` is the page size actually used. A `cursor` together
+        with a sort or a board is a 400.
+
+      **Page size in page-number mode** is `filters.pageSize`, or `limit` when you do not send one. It is
+      capped at 100. With `"bypassPageSizeCap": true` it can go up to 5000, for callers that need a
+      complete set in one response. A `pageSize` above 200 (5000 with the bypass) is clamped rather than
+      rejected.
+
+      **Filtering.** Send a JSON object in `filters`, URL-encoded. Its keys are described on the parameter
+      below. For example, deals in negotiation worth at least 50,000 that mention "northwind", soonest
+      close date first, 50 per page:
+
+      ```json
+      {
+        "search": "northwind",
+        "filters": [
+          {
+            "field": "stage",
+            "operator": "equals",
+            "value": "Negotiation"
+          },
+          {
+            "field": "deal_value",
+            "operator": "greaterThanOrEqual",
+            "value": 50000,
+            "conjunction": "and"
+          }
+        ],
+        "sort": [
+          {
+            "field": "close_date",
+            "direction": "asc"
+          }
+        ],
+        "page": 1,
+        "pageSize": 50
+      }
+      ```
+
+      `curl -G --data-urlencode` encodes the JSON into the query string for you:
+
+      ```bash
+      curl -G "https://api-prod.heliyos.ai/v1/platform/base-schemas/66a0f1e2d3c4b5a697880003/records" \
+        -H "Authorization: Bearer heliyos_..." \
+        --data-urlencode 'filters={
+          "search": "northwind",
+          "filters": [
+            {
+              "field": "stage",
+              "operator": "equals",
+              "value": "Negotiation"
+            },
+            {
+              "field": "deal_value",
+              "operator": "greaterThanOrEqual",
+              "value": 50000,
+              "conjunction": "and"
+            }
+          ],
+          "sort": [
+            {
+              "field": "close_date",
+              "direction": "asc"
+            }
+          ],
+          "page": 1,
+          "pageSize": 50
+        '}'
+      ```
+
+      **Boards.** With `"viewType": "kanban"` the response groups records by a field instead of paging
+      them: `data` is an array of `RecordKanbanColumn` (`columnId`, `items`, `pagination`) holding every
+      matching record, and `meta.pagination` is `{ page, limit, totalCount }`.
+
+      See [Pagination](/api-reference/pagination) and [Filtering and sorting](/api-reference/filtering).
+    parameters:
+      id:
+        description: The object's id.
+        example: 66a0f1e2d3c4b5a697880003
+      limit:
+        description: >-
+          Records per page, 1 to 100. Defaults to 20. In page-number mode it is the page size when
+          `filters.pageSize` is not sent.
+        example: 20
+      cursor:
+        description: >-
+          The `next_cursor` from the previous page. Only valid in cursor mode: no sort and no board in
+          `filters`.
+      page:
+        description: >-
+          A page number, starting at 1. Switches to page-number paging. `filters.page` takes precedence
+          when both are sent.
+        example: 1
+      filters:
+        description: |
+          A JSON object, URL-encoded, at most 20,000 characters. No key may start with `$` or contain a dot.
+          Keys:
+          - `search` (string): matches records where any field value contains the text, ignoring case.
+            Text, numbers and booleans are searched; lists, objects and values longer than 100 characters
+            are not. Results are not ranked by relevance; they keep the mode's order or your `sort`.
+          - `filters` (array, at most 500): conditions `{ "field", "operator", "value", "conjunction" }`.
+            - `field`: a field key, or `createdAt`, `updatedAt` or `isAgentAssigned` (watched). Anything from
+              the first `-` on is ignored. `<objectType>.<fieldKey>` (for example `company.company_name`)
+              compares values stored on the record's links, not the linked record itself.
+            - `operator`: `equals`, `notEquals` (exact match; text ignores case); `contains`, `notContains`,
+              `startsWith`, `endsWith` (text, ignoring case; `value` must be a string, and a comma in a
+              `contains` or `notContains` value means any or none of the parts); `empty`, `notEmpty`
+              (missing, null or `""`; no value); `greaterThan`, `greaterThanOrEqual`, `lessThan`,
+              `lessThanOrEqual` (numbers); `after`, `before` (dates, the same as `greaterThan` and
+              `lessThan`). Any other operator is treated as an exact match on the raw value.
+            - `value`: a string, number or boolean. A string that looks like a number is compared as a number.
+              Date fields are stored as text, so send ISO 8601 dates (`2026-12-31`). For `createdAt` and
+              `updatedAt` the value is read as a date, and `equals` matches the whole day.
+            - `conjunction`: `and` (default) or `or`. The first condition's is ignored; every other condition
+              must use the same one. Mixing `and` and `or` is a 400.
+          - `sort` (array): `{ "field", "direction" }`, with the same field names as conditions and
+            direction `asc` or `desc`. Text sorts ignore case. Sorting by `<objectType>.<fieldKey>` leaves
+            out records without a link of that type.
+          - `page` (integer, at least 1) and `pageSize` (integer, at least 1): page-number paging.
+          - `bypassPageSizeCap` (boolean): raises the page size cap from 100 to 5000.
+          - `isAgentAssigned` (boolean): `true` for watched records only, `false` for the others.
+          - `enrich` (boolean, default `true`): `false` leaves out linked records' values and returns 0 for
+            the activity counts. Faster for pickers.
+          - `viewType` (`kanban`) with `kanbanConfig.groupByField` (a field key, default `status`): return
+            a board grouped by that field.
+        example: '{"search":"northwind","filters":[{"field":"stage","operator":"equals","value":"Negotiation"}]}'
+    response:
+      description: A page of records, or a board when `filters.viewType` is `kanban`.
+      message: Objects fetched successfully
+      pagination: keyset
+      data:
+        type: array
+        description: 'The records. With `"viewType": "kanban"`, an array of `RecordKanbanColumn` instead.'
+        items: { $ref: "#/components/schemas/Record" }
+      example:
+        - _id: 6721c3d5e6f7a8b9c0d1e2f3
+          baseSchemaId: 66a0f1e2d3c4b5a697880003
+          organizationId: 66a0f1e2d3c4b5a697887766
+          objectType: deals
+          data:
+            deal_name: Northwind Traders renewal
+            stage: Negotiation
+            deal_value: 48000
+            close_date: "2026-12-15"
+            assigned_to:
+              - { id: 66a0f1e2d3c4b5a697881111, firstName: Dana, lastName: Reyes, email: dana@example.com }
+          relationships:
+            - _id: 6721c3d5e6f7a8b9c0d1e2f4
+              objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+              schemaId: 66a0f1e2d3c4b5a697880001
+              objectType: company
+              data: { company_name: Northwind Traders, website: "https://northwind.example" }
+          isAgentAssigned: false
+          aiColumnStatus: {}
+          commentCount: 1
+          noteCount: 2
+          taskCount: 1
+          metadata:
+            created: { at: "2026-11-02T14:10:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+            updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": >-
+        VALIDATION_FAILED: `filters` is not a JSON object, carries a `$` or dotted key, mixes `and` and `or`,
+        gives a text operator a non-string value, or `cursor` is sent with a sort or a board. A query the
+        database rejects (for example a malformed sort) answers "Error fetching records".
+      "403": "FORBIDDEN_ACTION: you may not view this object."
+      "404": "NOT_FOUND: no object with this id in the workspace."
+
+  getRecord:
+    summary: Get a record
+    description: |
+      Returns one record by id, from any object. Record ids are unique across objects.
+
+      `data` holds only the object's fields; a field you may not view is `null`. Each entry in
+      `relationships` carries the complete linked record in `fullData`. The response also includes every
+      note (`notes`) and task (`tasks`) linked to the record, newest first.
+    parameters:
+      id:
+        description: The record's id.
+        example: 6721c3d5e6f7a8b9c0d1e2f3
+    response:
+      description: The record.
+      message: Object fetched successfully
+      data: { $ref: "#/components/schemas/Record" }
+      example:
+        _id: 6721c3d5e6f7a8b9c0d1e2f3
+        id: 6721c3d5e6f7a8b9c0d1e2f3
+        baseSchemaId: 66a0f1e2d3c4b5a697880003
+        organizationId: 66a0f1e2d3c4b5a697887766
+        objectType: deals
+        data:
+          deal_name: Northwind Traders renewal
+          stage: Negotiation
+          deal_value: 48000
+          close_date: "2026-12-15"
+        relationships:
+          - _id: 6721c3d5e6f7a8b9c0d1e2f4
+            objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+            fullData:
+              _id: 66f1a8c3e4b0a1b2c3d4e5f6
+              baseSchemaId: 66a0f1e2d3c4b5a697880001
+              objectType: company
+              data: { company_name: Northwind Traders, website: "https://northwind.example" }
+        notes:
+          - _id: 6720b1f4c2a9e3d1f0a4b5c6
+            title: Pricing call follow-up
+            content: Champion confirmed budget for Q1.
+        tasks: []
+        isAgentAssigned: false
+        aiColumnStatus: {}
+        metadata:
+          created: { at: "2026-11-02T14:10:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "403": "FORBIDDEN_ACTION: you may not view this record's object."
+      "404": "NOT_FOUND: no record with this id in the workspace."
+
+  createRecord:
+    summary: Create a record
+    description: |
+      Creates a record in an object. Send the field values at the top level of the body, keyed by the
+      object's field keys (for example `company_name`, `website`, `people_name`, `email`, `deal_name`,
+      `stage`), and the ids of records to link in `relationships`.
+
+      **Values by field type.** Every type also accepts `null` and `""`.
+
+      | Field type | Value |
+      | --- | --- |
+      | `text`, `richText`, `phone`, `select` | A string. A `select` value is not checked against the field's options. |
+      | `email` | An email address. |
+      | `url` | A full URI, for example `https://northwind.example`. |
+      | `number`, `currency`, `rating` | A number. |
+      | `checkbox` | `true` or `false`. |
+      | `date`, `timestamp` | An ISO 8601 date or date-time string. It is stored as sent. |
+      | `multiSelect` | An array of strings. |
+      | `user` | An array. The app stores team members as `{ "id", "firstName", "lastName", "email" }`. |
+      | `image` | An object. |
+      | `file` | An array of `{ "fileName", "url" }` objects, optionally with `attachmentId`, `fileSize`, `mimeType`, `storageKey`, `uploadedAt`. |
+      | `relationship` | Any value. |
+
+      **What is written.**
+      - Fields the object marks required must be included.
+      - Only fields you may edit are written. Other keys, including keys that are not fields of the object,
+        are dropped without an error. Keys that start with `$` or contain a dot are dropped too.
+      - Field keys with a dot, such as `company.company_name` on people and deals, show a linked record's
+        value. Set them by linking that record in `relationships`.
+      - A field you leave out gets its configured default value, if it has one.
+      - Companies start with `account_status` and `engagement_status` set to `unknown` unless you send them,
+        and get a `logo` built from `website` when you send no logo. Companies and people start with
+        `enrichmentStatus` `NOT_ENRICHED`.
+      - A company whose `website`, or a person whose `email`, exactly matches an existing record of the
+        same object is refused with a 409.
+      - Each linked record gets a link back to the new record.
+
+      **Side effects.** The create fires the `company.created`, `people.created`, `deal.created` (or custom
+      type) event, which can start workers that subscribe to it. A new deal sends the workspace's deal
+      notification email when deal notifications are on. Companies, people and deals are sent to HubSpot
+      when the workspace syncs with it. A new company is enriched automatically when automatic enrichment
+      is on (Settings, Autopilot), which uses credits.
+    parameters:
+      id:
+        description: The id of the object to create the record in.
+        example: 66a0f1e2d3c4b5a697880003
+    requestBody:
+      schema:
+        type: object
+        description: Field values keyed by the object's field keys, plus `relationships`.
+        properties:
+          relationships:
+            type: array
+            description: >-
+              Ids of records to link to the new record, for example a person's company. Each must be a record in
+              this workspace; otherwise nothing is created and the call is a 404.
+            items: { $ref: "#/components/schemas/ObjectId" }
+          "<field_key>":
+            x-overlay-dynamic: true
+            description: >-
+              One property per field you set, named by the field's key (for example `deal_name` or `stage`).
+              The value's shape depends on the field's type; see the table above.
+      example:
+        deal_name: Northwind Traders renewal
+        stage: Negotiation
+        deal_value: 48000
+        close_date: "2026-12-15"
+        assigned_to:
+          - { id: 66a0f1e2d3c4b5a697881111, firstName: Dana, lastName: Reyes, email: dana@example.com }
+        relationships: [66f1a8c3e4b0a1b2c3d4e5f6]
+    response:
+      status: 201
+      description: The created record, as stored.
+      message: Object created successfully
+      specMismatch: The API answers with this status; the published spec still says 200.
+      data: { $ref: "#/components/schemas/Record" }
+      example:
+        _id: 6721c3d5e6f7a8b9c0d1e2f3
+        baseSchemaId: 66a0f1e2d3c4b5a697880003
+        organizationId: 66a0f1e2d3c4b5a697887766
+        objectType: deals
+        data:
+          deal_name: Northwind Traders renewal
+          stage: Negotiation
+          deal_value: 48000
+          close_date: "2026-12-15"
+          assigned_to:
+            - { id: 66a0f1e2d3c4b5a697881111, firstName: Dana, lastName: Reyes, email: dana@example.com }
+        relationships:
+          - _id: 6721c3d5e6f7a8b9c0d1e2f4
+            objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+        enrichmentDate: null
+        isAgentAssigned: false
+        aiColumnStatus: {}
+        metadata:
+          created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": "VALIDATION_FAILED: a required field is missing or a value does not match its field's type or rules."
+      "403": "FORBIDDEN_ACTION: you may not edit this object."
+      "404": "NOT_FOUND: no object with this id, or a `relationships` id is not a record in this workspace. Nothing is written."
+      "409": "CONFLICT: a company with this website, or a person with this email, already exists in the object."
+
+  updateRecord:
+    summary: Update a record
+    description: |
+      Changes some of a record's field values. Send them in `data`, keyed by field key, with the same value
+      shapes as Create a record.
+
+      **Fields you leave out keep their values.** Each key you send replaces that one field's value; send
+      `null` to clear a field. Required fields only need to be sent when you change them.
+
+      **Permissions.** Changing a field you may not edit is a 403 and writes nothing. Sending such a field
+      with its current value (or `null` for a field you may not view) is accepted and ignored, so you can
+      send back a whole record you read.
+
+      **Links.** `data.relationships` adds links to the records you name and never removes existing ones.
+      Each newly linked record gets a link back. Ids that are not records in this workspace are not
+      linked, and the call fails when none of the new ids is. To remove links, use
+      `DELETE /v1/platform/records/{id}/relationships`.
+
+      **Side effects.** Changing a company's `website` rebuilds its `logo` (or clears it). The update fires
+      the `<type>.updated` event and, when any value changed, `<type>.attribute_updated` with the changed
+      field keys; workers can subscribe to either. A deal update sends the workspace's deal notification
+      email when deal notifications are on, and synced records are updated in HubSpot. Enrichment status
+      cannot be changed here.
+    parameters:
+      id:
+        description: The record's id.
+        example: 6721c3d5e6f7a8b9c0d1e2f3
+    requestBody:
+      schema:
+        type: object
+        required: [data]
+        properties:
+          data:
+            type: object
+            description: >-
+              The field values to change, keyed by field key, plus optional `relationships`. May be empty.
+              Keys that start with `$` or contain a dot are dropped. Keys that are not fields of the object
+              are not rejected, but list and get never return them, so send field keys only.
+            additionalProperties: true
+            properties:
+              relationships:
+                type: array
+                description: Ids of records to link. Adds to the existing links.
+                items: { $ref: "#/components/schemas/ObjectId" }
+              "<field_key>":
+                x-overlay-dynamic: true
+                description: A new value for the field with this key. `null` clears it.
+      example:
+        data:
+          stage: Won
+          deal_value: 52000
+    response:
+      description: The updated record, as stored.
+      message: Object updated successfully
+      data: { $ref: "#/components/schemas/Record" }
+      example:
+        _id: 6721c3d5e6f7a8b9c0d1e2f3
+        baseSchemaId: 66a0f1e2d3c4b5a697880003
+        organizationId: 66a0f1e2d3c4b5a697887766
+        objectType: deals
+        data:
+          deal_name: Northwind Traders renewal
+          stage: Won
+          deal_value: 52000
+          close_date: "2026-12-15"
+        relationships:
+          - _id: 6721c3d5e6f7a8b9c0d1e2f4
+            objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+        metadata:
+          created: { at: "2026-11-02T14:10:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-05T10:00:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": "VALIDATION_FAILED: a value does not match its field's type or rules."
+      "403": "FORBIDDEN_ACTION: you may not edit this object, or the update changes a field you may not edit."
+      "404": "NOT_FOUND: no record with this id in the workspace."
+
+  bulkDeleteRecords:
+    summary: Delete records
+    description: |
+      Permanently deletes up to 1000 records of one object in a single call.
+
+      Ids that are not records of this object are ignored. The response does not say how many records
+      were deleted. Deleting removes the records from every other record's `relationships`. Notes and
+      tasks linked to them are kept. Each deleted record fires the `<type>.deleted` event, and records
+      synced to HubSpot are deleted there too.
+    parameters:
+      id:
+        description: The id of the object the records belong to.
+        example: 66a0f1e2d3c4b5a697880003
+    requestBody:
+      schema:
+        type: object
+        required: [objectIds]
+        properties:
+          objectIds:
+            type: array
+            description: Ids of the records to delete, 1 to 1000.
+            items: { $ref: "#/components/schemas/ObjectId" }
+      example:
+        objectIds: [6721c3d5e6f7a8b9c0d1e2f3, 6721c3d5e6f7a8b9c0d1e2f5]
+    response:
+      description: The records were deleted. `data` is an empty object.
+      message: Objects deleted successfully
+      empty: true
+    errors:
+      "403": "FORBIDDEN_ACTION: you may not edit this object."
+      "404": "NOT_FOUND: no object with this id, or none of the ids is a record of this object. Nothing is deleted."
+    content: |
+      <Warning>Deleting records cannot be undone. Linked records lose their links to the deleted records.</Warning>
+
+  listRecordLookup:
+    summary: List record names
+    description: |
+      Returns a compact index of an object's records, for searching by name on your side: each record's id,
+      display name, one supporting value, image and watched state. Use it to turn a name into a record id.
+
+      The index holds up to `limit` records, most recently updated first. It takes no search text and has
+      no further pages; for older records, use List records with `search`.
+      Names and values come only from fields you may view. `meta.count` is the number of rows returned.
+    parameters:
+      id:
+        description: The object's id.
+        example: 66a0f1e2d3c4b5a697880001
+      limit:
+        description: The most records to return, 1 to 2000. Defaults to 1000.
+        example: 1000
+    response:
+      description: The index rows.
+      message: Object lookup fetched successfully
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/RecordLookupRow" }
+      example:
+        - id: 66f1a8c3e4b0a1b2c3d4e5f6
+          name: Northwind Traders
+          imageUrl: "https://img.logo.example/northwind.example"
+          isWatched: true
+          updatedAt: "2026-11-04T09:30:00.000Z"
+        - id: 66f1a8c3e4b0a1b2c3d4e5f7
+          name: Contoso
+          isWatched: false
+          updatedAt: "2026-11-03T16:05:00.000Z"
+    errors:
+      "403": "FORBIDDEN_ACTION: you may not view this object."
+      "404": "NOT_FOUND: no object with this id in the workspace."

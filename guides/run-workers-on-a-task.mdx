@@ -1,0 +1,96 @@
+---
+title: "Run workers on a task"
+description: "Create a task, hand it to Heliyos workers, and follow the run through review."
+---
+
+<Warning>
+  Running a task makes workers act in your workspace and can use credits. Writes to companies, people, tasks and notes apply directly. Deal changes, emails, meetings and actions in connected apps wait for review unless your autopilot settings allow them.
+</Warning>
+
+<Steps>
+  <Step title="Create the task">
+    Write the task the way you would brief a colleague, and link it to the record it is about:
+
+    ```bash
+    curl https://api-prod.heliyos.ai/v1/platform/tasks \
+      -H "Authorization: Bearer $HELIYOS_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "title": "Prepare a renewal brief for Northwind Traders",
+        "description": "Summarise usage, open issues and the last three conversations. Flag risks.",
+        "priority": "high",
+        "relationships": [
+          {
+            "objectId": "<company id>",
+            "schemaId": "<companies object id>",
+            "objectType": "company"
+          }
+        ]
+      }'
+    ```
+
+    Keep the task `id` from the response.
+  </Step>
+  <Step title="Start the run">
+    ```bash
+    curl -X POST "https://api-prod.heliyos.ai/v1/platform/tasks/$TASK_ID/runs" \
+      -H "Authorization: Bearer $HELIYOS_API_KEY"
+    ```
+
+    ```json
+    {
+      "meta": {
+        "message": "Task run started."
+      },
+      "data": {
+        "triggered": true,
+        "orchestratorRunId": "3f9a1c2b7d4e4f0a9b8c7d6e5f4a3b2c",
+        "status": "queued"
+      }
+    }
+    ```
+
+    If a run is already open on the task, you get it back with `triggered: false` and no new run starts. A `409` means the workspace does not have the credits to start.
+  </Step>
+  <Step title="Follow the run">
+    Long-poll [Get a run](/api-reference/workers-and-runs/get-a-run) with `wait=30` while the status is `queued` or `running`:
+
+    ```bash
+    curl "https://api-prod.heliyos.ai/v1/platform/workers/runs/$RUN_ID?wait=30" \
+      -H "Authorization: Bearer $HELIYOS_API_KEY"
+    ```
+
+    | Status | What to do |
+    | --- | --- |
+    | `queued`, `running` | Call again. |
+    | `awaiting_approval` | A person reviews in Heliyos. `reviews` lists what is waiting. Stop polling and check back later. |
+    | `paused`, `waiting`, `scheduled` | Waiting on a person or a time. Check back later. |
+    | `completed` | Read the result in `output`. |
+    | `failed` | Read `error`, with `include=detail`. |
+  </Step>
+</Steps>
+
+## The same flow in JavaScript
+
+```javascript
+const api = (path, init = {}) =>
+  fetch(`https://api-prod.heliyos.ai/v1/platform${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${process.env.HELIYOS_API_KEY}`, "Content-Type": "application/json" },
+  }).then((r) => r.json());
+
+const { data: task } = await api("/tasks", {
+  method: "POST",
+  body: JSON.stringify({ title: "Prepare a renewal brief for Northwind Traders", priority: "high" }),
+});
+const { data: start } = await api(`/tasks/${task.id ?? task._id}/runs`, { method: "POST" });
+
+let run;
+do {
+  ({ data: run } = await api(`/workers/runs/${start.orchestratorRunId}?wait=30`));
+} while (run.status === "queued" || run.status === "running");
+
+console.log(run.status, run.status === "completed" ? run.output : run.reviews);
+```
+
+To start work from a plain-language request instead of a task, use [Ask Heliyos](/api-reference/workers-and-runs/ask-heliyos).

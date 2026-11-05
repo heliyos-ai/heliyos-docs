@@ -1,0 +1,758 @@
+tag:
+  name: Scouts
+  icon: /icons/app-scouts.svg
+  order: 80
+  description: >-
+    Scouts watch companies and the web for events such as funding rounds, product launches,
+    leadership changes or press coverage, and record each finding as a signal. A workspace Scout
+    defines what to look for; company Scouts are its copies running on individual companies.
+
+components:
+  ScoutAuditMetadata:
+    type: object
+    description: When the Scout was created and last changed. `by` is a service label such as `system`, not a user id.
+    properties:
+      created:
+        type: object
+        properties:
+          at: { $ref: "#/components/schemas/Timestamp" }
+          by: { type: string, description: "Who created it, for example `system`." }
+      updated:
+        type: object
+        properties:
+          at: { $ref: "#/components/schemas/Timestamp" }
+          by: { type: string, description: "Who last changed it, for example `system`." }
+
+  ScoutOutputSchema:
+    type: object
+    additionalProperties: true
+    description: |
+      The structured output a custom Scout asks for on each run, as `{ "type": "json", "json_schema": { ... } }`
+      where `json_schema` is a JSON Schema object. The default asks for a `signals` array (each item with
+      `company_name`, `website`, `summary` and `sources`), plus `total_count` and `query_summary`.
+      Built-in Scouts carry their own fixed schema.
+    example:
+      type: json
+      json_schema:
+        type: object
+        properties:
+          signals:
+            type: array
+            items:
+              type: object
+              properties:
+                company_name: { type: string }
+                website: { type: string }
+                summary: { type: string }
+                sources: { type: array, items: { type: string } }
+              required: [summary]
+          total_count: { type: number }
+          query_summary: { type: string }
+        required: [signals]
+
+  GlobalScout:
+    type: object
+    description: "A workspace Scout: what to look for, how often, and on which companies."
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the Scout belongs to.
+      name:
+        type: string
+        description: The Scout's name, 1 to 200 characters.
+      type:
+        type: string
+        enum: [default, custom]
+        description: |
+          - `default`: a built-in Scout every workspace gets. Six exist: company announcements and press
+            releases, product launches or updates, funding, M&A or financial news, executive changes or
+            quotes, industry analysis mentioning the company, and controversies or negative coverage.
+            They always apply to the watchlist, run daily, and can only be paused or resumed.
+          - `custom`: a Scout you created. Every field except the scope can be changed, and it can be deleted.
+      applyTo:
+        type: string
+        enum: [watchlist, selected_watchlist, entire_web]
+        description: |
+          The scope, fixed at creation.
+          - `watchlist`: runs on every watched company, including companies watched later.
+          - `selected_watchlist`: runs only on the companies in `selectedCompanyIds`.
+          - `entire_web`: runs once across the web, not tied to a company.
+      selectedCompanyIds:
+        type: array
+        description: The watched companies a `selected_watchlist` Scout runs on. Empty for other scopes.
+        items: { $ref: "#/components/schemas/ObjectId" }
+      category:
+        type: string
+        description: A short label that groups Scouts, for example `Hiring` or `Growth & Expansion`. Signals inherit it.
+      queryTemplate:
+        type: string
+        description: |
+          What the Scout looks for, in plain language, up to 5,000 characters. For the `watchlist` and
+          `selected_watchlist` scopes, the placeholders `{{company_name}}` and `{{company_website}}` are
+          replaced with "the company" and "the company website", and each company's own name and website
+          are added to the query when it runs.
+      cadence:
+        type: string
+        enum: [daily, weekly, monthly]
+        description: How often it runs. Built-in Scouts run `daily`; custom Scouts default to `weekly`.
+      effort:
+        type: string
+        enum: [low, medium, high]
+        description: |
+          Search depth for custom Scouts, `medium` by default. Each run of a custom Scout on one company
+          (or on the web) costs credits by effort: `low` 2.5, `medium` 7.5, `high` 10. May be absent on built-in Scouts.
+      outputSchema: { $ref: "#/components/schemas/ScoutOutputSchema" }
+      isActive:
+        type: boolean
+        description: |
+          Whether the Scout is running. A new custom Scout is `false` until you confirm its preview.
+          Change it with Set a workspace Scout's state (`POST /v1/platform/global-scouts/{id}/state`).
+      previewStatus:
+        type: string
+        nullable: true
+        enum: [pending, running, completed, failed, null]
+        description: |
+          The preview run of a custom Scout. `pending` when created, `running` once the preview started,
+          `completed` when its results are in `previewData`, `failed` if it could not start or finish.
+          Null on built-in Scouts.
+      previewRunId:
+        type: string
+        nullable: true
+        description: The id of the preview run. Null until a preview started.
+      previewData:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: The preview's findings, in the shape of `outputSchema` (by default `signals`, `total_count` and `query_summary`). Null until the preview completed.
+      metadata: { $ref: "#/components/schemas/ScoutAuditMetadata" }
+
+  GlobalScoutSummary:
+    description: A workspace Scout with its signal totals across every company it runs on.
+    allOf:
+      - $ref: "#/components/schemas/GlobalScout"
+      - type: object
+        properties:
+          signal_counts:
+            type: object
+            description: Signals found by this Scout's company Scouts.
+            properties:
+              total: { type: integer, description: Every signal found. }
+              new: { type: integer, description: Signals not read yet (status `new`). }
+          latest_signal:
+            nullable: true
+            description: The most recently detected signal, with `companyName` added. Null when there is none.
+            allOf: [{ $ref: "#/components/schemas/Signal" }]
+          active_company_count:
+            type: integer
+            description: Companies this Scout is actively running on (active company Scouts tied to a company).
+
+  CompanyScout:
+    type: object
+    description: |
+      A workspace Scout running on one company (or, for an `entire_web` Scout, on the web). It copies its
+      workspace Scout's fields; change them on the workspace Scout.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace.
+      baseSchemaObjectId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The company record it runs on. Absent for an `entire_web` Scout.
+      defaultScoutId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace Scout it is a copy of.
+      scoutType:
+        type: string
+        enum: [default, custom]
+        description: The workspace Scout's type.
+      executionMode:
+        type: string
+        enum: [monitor, task]
+        description: "`monitor` for built-in Scouts (continuous monitoring), `task` for custom Scouts (one run per cadence period, charged in credits)."
+      effort:
+        type: string
+        nullable: true
+        enum: [low, medium, high, null]
+        description: Search depth of a custom Scout. Null on built-in Scouts.
+      name: { type: string, description: The workspace Scout's name. }
+      category: { type: string, description: The workspace Scout's category. }
+      query:
+        type: string
+        description: The query as it runs, with the company's name and website added.
+      queryTemplate: { type: string, description: The workspace Scout's query. }
+      cadence:
+        type: string
+        enum: [daily, weekly, monthly]
+        description: How often it runs.
+      scope:
+        type: string
+        enum: [watchlist, entire_web]
+        description: "`entire_web` for a web-wide Scout, `watchlist` otherwise."
+      status:
+        type: string
+        enum: [active, paused, failed]
+        description: "`active` while running, `paused` while its workspace Scout is paused, `failed` when it could not run."
+      lastRunDate:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: When it last ran. Null before its first run.
+      lastRunId:
+        type: string
+        nullable: true
+        description: The id of its last run.
+      outputSchema: { $ref: "#/components/schemas/ScoutOutputSchema" }
+      metadata: { $ref: "#/components/schemas/ScoutAuditMetadata" }
+    additionalProperties: true
+
+  GlobalScoutStateChange:
+    type: object
+    title: active or paused
+    description: The result of `active` or `paused`.
+    properties:
+      success: { type: boolean, description: Always `true`. }
+      scout: { $ref: "#/components/schemas/GlobalScout" }
+      activated_count:
+        type: integer
+        description: "`active` only: company Scouts switched from paused (or failed) to active."
+      deactivated_count:
+        type: integer
+        description: "`paused` only: company Scouts of this Scout, all now paused."
+      monitors_deleted:
+        type: integer
+        description: "`paused` only: running monitors stopped."
+
+operations:
+  listGlobalScouts:
+    summary: List workspace Scouts
+    description: |
+      Returns every workspace Scout, built-in and custom, sorted by category and then name. Each one carries
+      its signal totals, its latest signal and how many companies it is running on.
+
+      The list is not paged: a workspace has a handful of Scouts.
+
+      A workspace Scout defines what to look for. The copies running on each company are company Scouts:
+      see List a company's Scouts (`GET /v1/platform/companies/{id}/scouts`).
+    parameters:
+      type:
+        description: "`default` for built-in Scouts only, `custom` for the Scouts you created."
+        example: custom
+      category:
+        description: Only Scouts with exactly this category (case-sensitive), up to 200 characters.
+        example: Hiring
+      isActive:
+        description: "`true` for running Scouts, `false` for paused Scouts and custom Scouts not yet confirmed."
+        example: true
+      applyTo:
+        description: Only Scouts with this scope. `watchlist` also matches older Scouts saved without a scope.
+        example: watchlist
+    response:
+      description: The workspace's Scouts.
+      message: Global scouts retrieved successfully
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/GlobalScoutSummary" }
+      example:
+        - _id: 6731c0a2b4e5f60718293a4b
+          organizationId: 66a0f1e2d3c4b5a697887766
+          name: Hiring for data roles
+          type: custom
+          applyTo: watchlist
+          selectedCompanyIds: []
+          category: Hiring
+          queryTemplate: New job postings at the company for data engineering or analytics roles.
+          cadence: weekly
+          effort: medium
+          outputSchema: { type: json, json_schema: { type: object, properties: { signals: { type: array } } } }
+          isActive: true
+          previewStatus: completed
+          previewRunId: trun_4b8e2f1a9c7d
+          previewData: null
+          metadata:
+            created: { at: "2026-10-02T08:15:00.000Z", by: system }
+            updated: { at: "2026-10-02T08:20:00.000Z", by: system }
+          signal_counts: { total: 12, new: 3 }
+          latest_signal:
+            _id: 6735a9d1e2f3a4b5c6d7e8f9
+            scoutSchemaId: 6732d4e5f6a7b8c9d0e1f2a3
+            baseSchemaObjectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            category: Hiring
+            scout_name: Hiring for data roles
+            summary: Northwind Traders posted three senior data engineer roles in Lisbon.
+            status: new
+            detected_date: "2026-11-03T06:00:00.000Z"
+            companyName: Northwind Traders
+          active_company_count: 8
+
+  getGlobalScout:
+    summary: Get a workspace Scout
+    description: |
+      Returns one workspace Scout with its signal totals, its latest signal and how many companies it is
+      running on. For a custom Scout you just created, poll this until `previewStatus` is `completed`,
+      then confirm it with Set a workspace Scout's state (`POST /v1/platform/global-scouts/{id}/state`).
+    parameters:
+      id:
+        description: The workspace Scout's id.
+        example: 6731c0a2b4e5f60718293a4b
+    response:
+      description: The workspace Scout.
+      message: Global scout retrieved successfully
+      data: { $ref: "#/components/schemas/GlobalScoutSummary" }
+      example:
+        _id: 6731c0a2b4e5f60718293a4b
+        organizationId: 66a0f1e2d3c4b5a697887766
+        name: Hiring for data roles
+        type: custom
+        applyTo: watchlist
+        selectedCompanyIds: []
+        category: Hiring
+        queryTemplate: New job postings at the company for data engineering or analytics roles.
+        cadence: weekly
+        effort: medium
+        isActive: false
+        previewStatus: completed
+        previewRunId: trun_4b8e2f1a9c7d
+        previewData:
+          signals:
+            - company_name: Contoso
+              website: https://contoso.example.com
+              summary: Contoso opened two analytics engineer roles.
+              sources: ["https://contoso.example.com/careers/analytics-engineer"]
+          total_count: 1
+          query_summary: Data and analytics job postings in the last month.
+        metadata:
+          created: { at: "2026-11-04T09:30:00.000Z", by: system }
+          updated: { at: "2026-11-04T09:32:00.000Z", by: system }
+        signal_counts: { total: 0, new: 0 }
+        latest_signal: null
+        active_company_count: 0
+    errors:
+      "404": "NOT_FOUND: no workspace Scout with this id in the workspace."
+
+  createGlobalScout:
+    summary: Create a custom Scout
+    description: |
+      Creates a custom workspace Scout and starts a preview run of its query. The Scout is created inactive
+      (`isActive: false`) and does not run on any company yet.
+
+      1. Create the Scout. `previewStatus` is `running` (or `failed` if the preview could not start; the Scout
+         is still created).
+      2. Poll Get a workspace Scout (`GET /v1/platform/global-scouts/{id}`) until `previewStatus` is `completed`, and
+         review `previewData`.
+      3. Send `{"state": "confirmed"}` to Set a workspace Scout's state (`POST /v1/platform/global-scouts/{id}/state`) to
+         activate it, or `{"state": "cancelled"}` to discard it.
+
+      Once confirmed, the Scout runs on its scope at its cadence, and each run on a company (or on the web)
+      costs credits by `effort`: `low` 2.5, `medium` 7.5, `high` 10. Calling this twice creates two Scouts.
+    requestBody:
+      schema:
+        type: object
+        required: [name, category, queryTemplate]
+        properties:
+          name:
+            type: string
+            description: The Scout's name, 1 to 200 characters after trimming.
+            example: Hiring for data roles
+          category:
+            type: string
+            description: A short label, 1 to 200 characters after trimming. Signals inherit it.
+            example: Hiring
+          queryTemplate:
+            type: string
+            description: |
+              What to look for, in plain language, 1 to 5,000 characters after trimming. For the watchlist scopes,
+              write it about "the company": each company's name and website are added when it runs. For
+              `entire_web`, describe the event anywhere on the web.
+            example: New job postings at the company for data engineering or analytics roles.
+          cadence:
+            type: string
+            description: "How often it runs: `daily`, `weekly` (default) or `monthly`."
+            example: weekly
+          applyTo:
+            type: string
+            description: |
+              The scope, fixed once created: `watchlist` (default, every watched company), `selected_watchlist`
+              (only `selectedCompanyIds`) or `entire_web` (one run across the web).
+            example: watchlist
+          effort:
+            type: string
+            description: "Search depth: `low`, `medium` (default) or `high`. Higher effort costs more credits per run."
+            example: medium
+          selectedCompanyIds:
+            type: array
+            description: |
+              Required, with at least one id, when `applyTo` is `selected_watchlist`; ignored otherwise. Up to 1,000
+              company record ids, each a watched company in this workspace. Duplicates are removed.
+            items: { $ref: "#/components/schemas/ObjectId" }
+          previewCompanyData:
+            type: object
+            description: |
+              `selected_watchlist` only: the company the preview runs on, as `company_name` (up to 500 characters)
+              and optional `website` (up to 2,000 characters). Ignored for other scopes or when `company_name` is empty.
+            properties:
+              company_name: { type: string, description: The company's name. }
+              website: { type: string, description: The company's website. }
+          previewLookbackPeriod:
+            type: string
+            description: "How far back the preview searches: `1_month` (default), `3_months` or `6_months`."
+            example: 1_month
+          outputSchema:
+            type: object
+            additionalProperties: true
+            description: |
+              The structured output each run returns. Send `{ "type": "json", "json_schema": { ... } }` or a bare JSON
+              Schema object (`{ "type": "object", "properties": { ... } }`); anything else becomes an empty object
+              schema. In `signals[].items`, `citations`, `confidence_score` and `source` are removed and a `sources`
+              array is added. Omit it for the default schema (see the `ScoutOutputSchema` component).
+      examples:
+        watchlist:
+          summary: Every watched company
+          value:
+            name: Hiring for data roles
+            category: Hiring
+            queryTemplate: New job postings at the company for data engineering or analytics roles.
+            cadence: weekly
+            effort: medium
+        selected:
+          summary: Selected watched companies
+          value:
+            name: Expansion into Europe
+            category: Growth & Expansion
+            queryTemplate: The company opening an office or entity in a European country.
+            applyTo: selected_watchlist
+            selectedCompanyIds: [66f1a8c3e4b0a1b2c3d4e5f6, 66f1a8c3e4b0a1b2c3d4e5f7]
+            previewCompanyData: { company_name: Northwind Traders, website: https://northwind.example.com }
+            previewLookbackPeriod: 3_months
+    response:
+      description: The new Scout, inactive while its preview runs.
+      message: Custom global scout created successfully
+      data: { $ref: "#/components/schemas/GlobalScout" }
+      example:
+        _id: 6731c0a2b4e5f60718293a4b
+        organizationId: 66a0f1e2d3c4b5a697887766
+        name: Hiring for data roles
+        type: custom
+        applyTo: watchlist
+        selectedCompanyIds: []
+        category: Hiring
+        queryTemplate: New job postings at the company for data engineering or analytics roles.
+        cadence: weekly
+        effort: medium
+        isActive: false
+        previewStatus: running
+        previewRunId: trun_4b8e2f1a9c7d
+        previewData: null
+        metadata:
+          created: { at: "2026-11-04T09:30:00.000Z", by: system }
+          updated: { at: "2026-11-04T09:30:01.000Z", by: system }
+    errors:
+      "400": "VALIDATION_FAILED: a field is invalid, `selectedCompanyIds` is missing for `selected_watchlist`, or a selected company is not a watched company."
+      "404": "NOT_FOUND: a `selectedCompanyIds` entry is not a record in this workspace."
+
+  updateGlobalScout:
+    summary: Update a custom Scout
+    description: |
+      Changes a custom Scout's fields. Send at least one field; what you leave out is kept. The changes are
+      copied to every company Scout it runs on.
+
+      - The scope (`applyTo`) cannot change. Sending the current value is accepted; any other value is a 400.
+      - `selectedCompanyIds` replaces the selected companies of a `selected_watchlist` Scout. If the Scout is
+        active, it starts on the added companies, and the company Scouts of removed companies are deleted
+        (their signals are kept).
+      - Built-in Scouts cannot be edited (403). Pause or resume them with
+        Set a workspace Scout's state (`POST /v1/platform/global-scouts/{id}/state`), which is also how you activate or pause a custom Scout.
+    parameters:
+      id:
+        description: The custom Scout's id.
+        example: 6731c0a2b4e5f60718293a4b
+    requestBody:
+      schema:
+        type: object
+        minProperties: 1
+        properties:
+          name:
+            type: string
+            description: A new name, 1 to 200 characters after trimming.
+          category:
+            type: string
+            description: A new category, 1 to 200 characters after trimming.
+          queryTemplate:
+            type: string
+            description: A new query, 1 to 5,000 characters after trimming.
+          cadence:
+            type: string
+            description: "`daily`, `weekly` or `monthly`."
+          applyTo:
+            type: string
+            description: The scope cannot change. Only the Scout's current value is accepted.
+          effort:
+            type: string
+            description: "`low`, `medium` or `high`. Changes the credits each run costs."
+          selectedCompanyIds:
+            type: array
+            description: "`selected_watchlist` Scouts only: the complete new set of watched company record ids, up to 1,000."
+            items: { $ref: "#/components/schemas/ObjectId" }
+          outputSchema:
+            type: object
+            additionalProperties: true
+            description: A new output schema, normalized as on create.
+      example:
+        cadence: daily
+        effort: high
+    response:
+      description: The updated Scout (without signal totals).
+      message: Global scout updated successfully
+      data: { $ref: "#/components/schemas/GlobalScout" }
+      example:
+        _id: 6731c0a2b4e5f60718293a4b
+        organizationId: 66a0f1e2d3c4b5a697887766
+        name: Hiring for data roles
+        type: custom
+        applyTo: watchlist
+        category: Hiring
+        queryTemplate: New job postings at the company for data engineering or analytics roles.
+        cadence: daily
+        effort: high
+        isActive: true
+        previewStatus: completed
+    errors:
+      "400": "VALIDATION_FAILED: a field is invalid, `applyTo` differs from the Scout's scope, `selectedCompanyIds` was sent for a Scout that is not `selected_watchlist`, or a selected company is not watched."
+      "403": "FORBIDDEN: the Scout is built in. Only its state can change."
+      "404": "NOT_FOUND: no workspace Scout with this id, or a `selectedCompanyIds` entry is not a record in this workspace."
+
+  setGlobalScoutState:
+    summary: Set a workspace Scout state
+    description: |
+      Activates, pauses, confirms or discards a workspace Scout. `state` decides what happens:
+
+      | `state` | Works on | What it does | `data` |
+      | --- | --- | --- | --- |
+      | `active` | Any Scout | Sets `isActive: true`, resumes its paused company Scouts and starts it on its scope again. | `{ success, scout, activated_count }` |
+      | `paused` | Any Scout | Sets `isActive: false`, pauses every company Scout and stops their monitors. Signals are kept. | `{ success, scout, deactivated_count, monitors_deleted }` |
+      | `confirmed` | A custom Scout whose `previewStatus` is `completed` | Activates it and starts it on its scope: every watched company, the selected companies, or the web. | The Scout |
+      | `cancelled` | A custom Scout with `isActive: false` | Deletes the Scout permanently. On any other Scout it changes nothing. | `{ success: true }` |
+
+      `meta.message` depends on `state`: `Global scout activated successfully`, `Global scout deactivated successfully`,
+      `Scout confirmed and activated successfully` or `Scout preview cancelled successfully`.
+
+      Once active, a custom Scout's runs cost credits by `effort`.
+    content: |
+      <Warning>
+      `cancelled` deletes any inactive custom Scout, including one you paused, and only the workspace Scout
+      itself: its company Scouts are left behind. To remove a custom Scout that has run, use
+      Delete a custom Scout (`DELETE /v1/platform/global-scouts/{id}`) instead. `active` also activates a custom Scout
+      whose preview has not completed; use `confirmed` for new Scouts.
+      </Warning>
+    parameters:
+      id:
+        description: The workspace Scout's id.
+        example: 6731c0a2b4e5f60718293a4b
+    requestBody:
+      schema:
+        type: object
+        required: [state]
+        properties:
+          state:
+            type: string
+            description: "`active`, `paused`, `confirmed` or `cancelled`. See the table above."
+            example: confirmed
+      examples:
+        confirm:
+          summary: Activate a new custom Scout after its preview
+          value: { state: confirmed }
+        pause:
+          summary: Pause a Scout on every company
+          value: { state: paused }
+    response:
+      description: The result. Its shape depends on `state`.
+      message: Global scout activated successfully
+      data:
+        oneOf:
+          - $ref: "#/components/schemas/GlobalScoutStateChange"
+          - allOf: [{ $ref: "#/components/schemas/GlobalScout" }]
+            title: confirmed
+            description: The confirmed Scout.
+          - type: object
+            title: cancelled
+            properties:
+              success: { type: boolean, description: Always `true`. }
+      example:
+        success: true
+        scout:
+          _id: 6731c0a2b4e5f60718293a4b
+          name: Hiring for data roles
+          type: custom
+          applyTo: watchlist
+          cadence: weekly
+          effort: medium
+          isActive: true
+          previewStatus: completed
+        activated_count: 8
+    errors:
+      "400": "VALIDATION_FAILED: `state` is missing or not one of the four values, or `confirmed` was sent before the preview completed."
+      "404": "NOT_FOUND: no workspace Scout with this id in the workspace."
+
+  deleteGlobalScout:
+    summary: Delete a custom Scout
+    description: |
+      Deletes a custom Scout permanently, with every company Scout it runs on, and stops their monitors.
+      Signals it already found stay in the workspace: they still appear in List signals (`GET /v1/platform/signals`),
+      but no longer in the Scout's own signal list. Built-in Scouts cannot be deleted; pause them instead.
+    content: |
+      <Warning>This cannot be undone. The Scout and all of its company Scouts are deleted.</Warning>
+    parameters:
+      id:
+        description: The custom Scout's id.
+        example: 6731c0a2b4e5f60718293a4b
+    response:
+      description: What was deleted.
+      message: Global scout deleted successfully
+      data:
+        type: object
+        properties:
+          success: { type: boolean, description: Always `true`. }
+          deleted_company_scouts: { type: integer, description: Company Scouts deleted with it. }
+          monitors_deleted: { type: integer, description: Running monitors stopped. }
+      example:
+        success: true
+        deleted_company_scouts: 8
+        monitors_deleted: 0
+    errors:
+      "403": "FORBIDDEN: the Scout is built in and cannot be deleted."
+      "404": "NOT_FOUND: no workspace Scout with this id in the workspace."
+
+  listCompanyScouts:
+    summary: List company Scouts
+    description: |
+      Returns the Scouts running on one company, newest first. Each entry is a company Scout: a copy of a
+      workspace Scout (`defaultScoutId`) for this company. The list is not paged.
+    parameters:
+      id:
+        description: The company record's id.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+      status:
+        description: "Only company Scouts in this status: `active`, `paused` or `failed`."
+        example: active
+    response:
+      description: The company's Scouts.
+      message: Scouts retrieved successfully
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/CompanyScout" }
+      example:
+        - _id: 6732d4e5f6a7b8c9d0e1f2a3
+          organizationId: 66a0f1e2d3c4b5a697887766
+          baseSchemaObjectId: 66f1a8c3e4b0a1b2c3d4e5f6
+          defaultScoutId: 6731c0a2b4e5f60718293a4b
+          scoutType: custom
+          executionMode: task
+          effort: medium
+          name: Hiring for data roles
+          category: Hiring
+          query: Find data for the company Northwind Traders with the website https://northwind.example.com. New job postings at the company for data engineering or analytics roles.
+          queryTemplate: New job postings at the company for data engineering or analytics roles.
+          cadence: weekly
+          scope: watchlist
+          status: active
+          lastRunDate: "2026-11-03T06:00:00.000Z"
+          metadata:
+            created: { at: "2026-10-02T08:20:00.000Z", by: system }
+            updated: { at: "2026-11-03T06:00:00.000Z", by: system }
+    errors:
+      "404": "NOT_FOUND: no record with this id in the workspace."
+
+  createCompanyScouts:
+    summary: Add Scouts to a company
+    description: |
+      Starts the given workspace Scouts on one company. Watching a company already starts every active
+      `watchlist` Scout on it; use this to add Scouts to a company that is missing some.
+
+      Setup runs in the background: the response says it started, and the company Scouts appear in
+      List a company's Scouts (`GET /v1/platform/companies/{id}/scouts`) once created. A Scout already set up on the
+      company is not added twice. Custom Scouts cost credits on each run by `effort`.
+    parameters:
+      id:
+        description: The company record's id.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+    requestBody:
+      schema:
+        type: object
+        required: [defaultScoutIds]
+        properties:
+          defaultScoutIds:
+            type: array
+            description: |
+              1 to 50 workspace Scout ids. Each must be an active Scout with scope `watchlist`, built in or custom.
+            items: { $ref: "#/components/schemas/ObjectId" }
+          companyData:
+            type: object
+            additionalProperties: true
+            description: |
+              Optional company field values used to build each Scout's query (`company_name` or `name`, and
+              `website` or `company_website`). When omitted or empty, the record's own values are used. Most
+              callers omit it.
+      example:
+        defaultScoutIds: [6731c0a2b4e5f60718293a4b, 6731c0a2b4e5f60718293a4c]
+    response:
+      description: Setup started in the background.
+      message: Scouts creation initiated successfully
+      data:
+        type: object
+        properties:
+          message: { type: string, description: A note that setup started. }
+          status: { type: string, description: "`processing`: setup continues in the background." }
+          total_scouts: { type: integer, description: The number of Scout ids sent. }
+      example:
+        message: Scout creation triggered successfully
+        status: processing
+        total_scouts: 2
+    errors:
+      "400": "VALIDATION_FAILED: `defaultScoutIds` is empty or too long, or a Scout is inactive or not scoped to the watchlist."
+      "404": "NOT_FOUND: no record with this id in the workspace, or a `defaultScoutIds` entry is not a workspace Scout."
+
+  deleteCompanyScouts:
+    summary: Remove company Scouts
+    description: |
+      Stops and deletes every company Scout running on one company. There is no per-Scout removal. The
+      signals those Scouts found are deleted with them. The company stays watched and keeps using its Watcher,
+      and the workspace Scouts are not changed. Add Scouts back with Add Scouts to a company (`POST /v1/platform/companies/{id}/scouts`).
+
+      Unwatching a company does this for you.
+    content: |
+      <Warning>This cannot be undone. The company's Scouts and their signals are deleted.</Warning>
+    parameters:
+      id:
+        description: The company record's id.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+    response:
+      description: |
+        Which company Scouts were removed. If the removal fails as a whole, the call can still answer 200 with
+        `{ "success": false, "error": "..." }`: check `success` is an array.
+      message: Scouts deleted successfully
+      data:
+        type: object
+        properties:
+          success:
+            type: array
+            description: Ids of the company Scouts removed.
+            items: { $ref: "#/components/schemas/ObjectId" }
+          failed:
+            type: array
+            description: Company Scouts that could not be removed. Call again to retry.
+            items:
+              type: object
+              properties:
+                scout_id: { $ref: "#/components/schemas/ObjectId" }
+                error: { type: string, description: Why it failed. }
+          total: { type: integer, description: Company Scouts found on the company. }
+          success_count: { type: integer, description: How many were removed. }
+          failed_count: { type: integer, description: How many could not be removed. }
+      example:
+        success: [6732d4e5f6a7b8c9d0e1f2a3, 6732d4e5f6a7b8c9d0e1f2a4]
+        failed: []
+        total: 2
+        success_count: 2
+        failed_count: 0
+    errors:
+      "404": "NOT_FOUND: no record with this id in the workspace."

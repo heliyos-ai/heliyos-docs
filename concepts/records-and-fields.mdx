@@ -1,0 +1,72 @@
+---
+title: "Records and fields"
+description: "Read and write field values, link records to each other, and avoid the common pitfalls."
+---
+
+A **record** is one row of an object: a company, a person, a deal or a custom object entry. Reads return its field values in `data`, keyed by field `name`.
+
+## Create
+
+Send field values at the top level of the body, and the ids of records to link in `relationships`:
+
+```bash
+curl https://api-prod.heliyos.ai/v1/platform/base-schemas/<companies object id>/records \
+  -H "Authorization: Bearer $HELIYOS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "company_name": "Northwind Traders",
+    "website": "https://northwind.example",
+    "relationships": ["<person record id>"]
+  }'
+```
+
+- Required fields must be included.
+- Keys that are not fields you may edit are dropped without an error.
+- A company with a `website`, or a person with an `email`, that already exists answers `409 CONFLICT`. Look the record up first if your source may send duplicates.
+
+## Update
+
+Send only the fields you want to change, inside `data`. Fields you leave out keep their values. Send `null` to clear one.
+
+```bash
+curl -X PATCH https://api-prod.heliyos.ai/v1/platform/records/<record id> \
+  -H "Authorization: Bearer $HELIYOS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "stage": "Negotiation"
+    }
+  }'
+```
+
+Changes fire `<type>.updated` and `<type>.attribute_updated` events. Workers subscribed to those events can act on the change.
+
+## Value shapes
+
+| Field type | Send |
+| --- | --- |
+| Text, rich text, phone, select | A string |
+| Email | An email address |
+| URL | A full URL, such as `https://northwind.example` |
+| Number, currency, rating | A number |
+| Checkbox | `true` or `false` |
+| Date, timestamp | An ISO 8601 date or date-time |
+| Multi select | An array of strings |
+
+The [Create a record](/api-reference/records/create-a-record) page has the full table, including users, images, files and relationships.
+
+## Links between records
+
+`relationships` connects records: a person to their company, a deal to its company and contacts. Linking is two-way: the other record gets a link back.
+
+- On create, `relationships` is an array of record ids.
+- On update, ids in `data.relationships` are **added**. Existing links are never removed by an update.
+- To remove links, call `DELETE /v1/platform/records/{id}/relationships`.
+
+Notes and tasks link to records the same way, with `{ objectId, schemaId, objectType }` entries.
+
+## Find a record
+
+- [List records](/api-reference/records/list-records) with `filters` to search and filter by field values.
+- [List record names](/api-reference/records/list-record-names) for a fast id and name lookup, such as an autocomplete.
+- [Get a record](/api-reference/records/get-a-record) for one record with its links, notes and tasks.

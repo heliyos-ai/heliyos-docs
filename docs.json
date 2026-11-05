@@ -1,0 +1,475 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "palm",
+  "name": "Heliyos",
+  "description": "Developer docs for Heliyos, the AI operating system for revenue. Build on its unified customer memory and AI workers with the REST API and the MCP server.",
+  "colors": {
+    "primary": "#27251E",
+    "light": "#FFD037",
+    "dark": "#27251E"
+  },
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png",
+    "href": "https://www.heliyos.ai"
+  },
+  "favicon": "/favicon.png",
+  "appearance": {
+    "default": "system",
+    "strict": false
+  },
+  "background": {
+    "color": {
+      "light": "#FAF7F3",
+      "dark": "#1E1C17"
+    }
+  },
+  "fonts": {
+    "family": "Geist",
+    "weight": 400,
+    "source": "/fonts/Geist-Regular.woff2",
+    "format": "woff2",
+    "heading": {
+      "family": "Geist",
+      "weight": 600,
+      "source": "/fonts/Geist-SemiBold.woff2",
+      "format": "woff2"
+    },
+    "body": {
+      "family": "Geist",
+      "weight": 400,
+      "source": "/fonts/Geist-Regular.woff2",
+      "format": "woff2"
+    }
+  },
+  "icons": {
+    "library": "tabler"
+  },
+  "styling": {
+    "eyebrows": "section",
+    "codeblocks": "dark"
+  },
+  "thumbnails": {
+    "preset": "headline",
+    "appearance": "light",
+    "surface": "neutral"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/heliyos-ai",
+        "icon": "brand-github"
+      },
+      {
+        "label": "LinkedIn",
+        "href": "https://www.linkedin.com/company/heliyos",
+        "icon": "brand-linkedin"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Join waitlist",
+      "href": "https://www.heliyos.ai"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "index",
+              "quickstart",
+              "authentication"
+            ],
+            "icon": "/icons/group-start.svg"
+          },
+          {
+            "group": "Core concepts",
+            "pages": [
+              "concepts/workspace-and-objects",
+              "concepts/records-and-fields",
+              "concepts/timeline",
+              "concepts/workers-and-review"
+            ],
+            "icon": "/icons/app-objects.svg"
+          },
+          {
+            "group": "Using the API",
+            "pages": [
+              "api-reference/pagination",
+              "api-reference/filtering",
+              "api-reference/errors",
+              "api-reference/rate-limits"
+            ],
+            "icon": "/icons/api.svg"
+          },
+          {
+            "group": "Recipes",
+            "pages": [
+              "guides/sync-companies",
+              "guides/upload-a-file",
+              "guides/run-workers-on-a-task"
+            ],
+            "icon": "/icons/group-recipes.svg"
+          }
+        ],
+        "icon": "/icons/tab-guides.svg"
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction"
+            ],
+            "icon": "/icons/app-pages.svg"
+          },
+          {
+            "group": "Workspace",
+            "icon": "/icons/app-general.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/organization",
+              "GET /v1/platform/usage"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Schemas",
+            "icon": "/icons/app-objects.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/base-schemas",
+              "GET /v1/platform/base-schemas/{id}",
+              "POST /v1/platform/base-schemas/{id}/fields",
+              "PATCH /v1/platform/base-schemas/{id}/fields/{fieldId}",
+              "DELETE /v1/platform/base-schemas/{id}/fields/{fieldId}"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Records",
+            "icon": "/icons/app-company.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/base-schemas/{id}/records",
+              "GET /v1/platform/records/{id}",
+              "POST /v1/platform/base-schemas/{id}/records",
+              "PATCH /v1/platform/records/{id}",
+              "POST /v1/platform/base-schemas/{id}/records/bulk-delete",
+              "GET /v1/platform/base-schemas/{id}/records/lookup"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Timeline",
+            "icon": "/icons/app-history.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/records/{id}/timeline"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Activities",
+            "icon": "/icons/app-runs.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/records/{id}/events",
+              "GET /v1/platform/tasks/{id}/events"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Interactions",
+            "icon": "/icons/app-inbox.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/interactions",
+              "GET /v1/platform/interactions/{id}"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Notes",
+            "icon": "/icons/app-notes.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/notes",
+              "GET /v1/platform/notes/{id}",
+              "POST /v1/platform/notes",
+              "PATCH /v1/platform/notes/{id}",
+              "DELETE /v1/platform/notes/{id}"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Tasks",
+            "icon": "/icons/app-tasks.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/tasks",
+              "GET /v1/platform/tasks/{id}",
+              "POST /v1/platform/tasks",
+              "PATCH /v1/platform/tasks/{id}",
+              "DELETE /v1/platform/tasks/{id}",
+              "POST /v1/platform/tasks/{id}/runs"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Workers and runs",
+            "icon": "/icons/app-workers.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/agents",
+              "GET /v1/platform/agents/{id}",
+              "POST /v1/platform/agents",
+              "PATCH /v1/platform/agents/{id}",
+              "DELETE /v1/platform/agents/{id}",
+              "POST /v1/platform/orchestrator/chats",
+              "GET /v1/platform/workers/runs",
+              "GET /v1/platform/workers/runs/{id}",
+              "GET /v1/platform/workers/triggers",
+              "GET /v1/platform/workers/tools"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Reviews",
+            "icon": "/icons/tasks.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/reviews",
+              "GET /v1/platform/reviews/{id}",
+              "POST /v1/platform/reviews/{id}/decisions"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Scouts",
+            "icon": "/icons/app-scouts.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/global-scouts",
+              "GET /v1/platform/global-scouts/{id}",
+              "POST /v1/platform/global-scouts",
+              "PATCH /v1/platform/global-scouts/{id}",
+              "POST /v1/platform/global-scouts/{id}/state",
+              "DELETE /v1/platform/global-scouts/{id}",
+              "GET /v1/platform/companies/{id}/scouts",
+              "POST /v1/platform/companies/{id}/scouts",
+              "DELETE /v1/platform/companies/{id}/scouts"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Signals",
+            "icon": "/icons/app-signals.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/signals",
+              "GET /v1/platform/global-scouts/{id}/signals",
+              "POST /v1/platform/signals/{id}/read",
+              "POST /v1/platform/signals/bulk-read"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Watchlist",
+            "icon": "/icons/app-watchlist.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/watchlist/statistics",
+              "POST /v1/platform/companies/{id}/watch",
+              "DELETE /v1/platform/companies/{id}/watch"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Knowledge base",
+            "icon": "/icons/app-knowledge.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/auth/organizations/current",
+              "PATCH /v1/auth/organizations/current"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Files",
+            "icon": "/icons/app-file.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "POST /v1/platform/attachments/presigned-urls",
+              "POST /v1/platform/attachments",
+              "GET /v1/platform/attachments",
+              "GET /v1/platform/attachments/{id}",
+              "GET /v1/platform/attachments/{id}/download",
+              "DELETE /v1/platform/attachments/{id}"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Labels",
+            "icon": "/icons/app-labels.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/classification-labels",
+              "POST /v1/platform/classification-labels",
+              "PATCH /v1/platform/classification-labels/{id}",
+              "DELETE /v1/platform/classification-labels/{id}"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Team",
+            "icon": "/icons/app-teams.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/auth/team-memberships",
+              "POST /v1/auth/team-memberships",
+              "DELETE /v1/auth/team-memberships/{id}",
+              "PATCH /v1/auth/team-memberships/{id}/role",
+              "GET /v1/auth/roles"
+            ],
+            "generated": "openapi"
+          },
+          {
+            "group": "Notification settings",
+            "icon": "/icons/app-preferences.svg",
+            "openapi": "api-reference/openapi.json",
+            "pages": [
+              "GET /v1/platform/notification-settings",
+              "PATCH /v1/platform/notification-settings"
+            ],
+            "generated": "openapi"
+          }
+        ],
+        "icon": "/icons/tab-api.svg"
+      },
+      {
+        "tab": "MCP server",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "mcp/overview",
+              "mcp/install",
+              "mcp/clients",
+              "mcp/configuration"
+            ],
+            "icon": "/icons/tab-mcp.svg"
+          },
+          {
+            "group": "Tools",
+            "icon": "/icons/group-tools.svg",
+            "pages": [
+              "mcp/tools/index",
+              "mcp/tools/records",
+              "mcp/tools/timeline-and-activity",
+              "mcp/tools/workspace-objects-and-fields",
+              "mcp/tools/notes",
+              "mcp/tools/tasks",
+              "mcp/tools/scouts-and-signals",
+              "mcp/tools/ask-runs-and-reviews",
+              "mcp/tools/workers-triggers-and-tools",
+              "mcp/tools/knowledge-base-and-files",
+              "mcp/tools/watchlist",
+              "mcp/tools/labels",
+              "mcp/tools/team",
+              "mcp/tools/notification-settings",
+              "mcp/tools/usage"
+            ],
+            "generated": "mcp-tools"
+          },
+          {
+            "group": "Operate",
+            "pages": [
+              "mcp/prompts-and-resources",
+              "mcp/security",
+              "mcp/troubleshooting"
+            ],
+            "icon": "/icons/group-operate.svg"
+          }
+        ],
+        "icon": "/icons/tab-mcp.svg"
+      },
+      {
+        "tab": "Changelog",
+        "icon": "/icons/app-history.svg",
+        "groups": [
+          {
+            "group": "Changelog",
+            "pages": [
+              "changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    },
+    "params": {
+      "expanded": "closed"
+    },
+    "examples": {
+      "languages": [
+        "curl",
+        "javascript",
+        "python"
+      ],
+      "defaults": "all"
+    }
+  },
+  "seo": {
+    "indexing": "navigable",
+    "metatags": {
+      "og:site_name": "Heliyos",
+      "og:locale": "en_US",
+      "og:type": "website",
+      "og:image": "https://www.heliyos.ai/assets/social-preview-2026-10-28.jpeg",
+      "og:image:width": "1200",
+      "og:image:height": "630",
+      "og:image:alt": "Heliyos: The AI operating system for revenue",
+      "twitter:card": "summary_large_image",
+      "twitter:image": "https://www.heliyos.ai/assets/social-preview-2026-10-28.jpeg",
+      "twitter:image:alt": "Heliyos: The AI operating system for revenue",
+      "keywords": "Heliyos API, Heliyos MCP server, AI operating system for revenue, AI workers, customer memory, CRM API, MCP server for sales",
+      "canonical": "https://docs.heliyos.ai"
+    },
+    "organization": {
+      "id": "https://www.heliyos.ai/#organization",
+      "name": "Heliyos",
+      "url": "https://www.heliyos.ai",
+      "logo": "https://www.heliyos.ai/assets/brand/logo-color.png",
+      "sameAs": [
+        "https://www.heliyos.ai",
+        "https://www.linkedin.com/company/heliyos",
+        "https://github.com/heliyos-ai",
+        "https://www.npmjs.com/package/@heliyos/mcp"
+      ]
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "metadata": {
+    "timestamp": true
+  }
+}

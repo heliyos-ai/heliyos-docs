@@ -1,0 +1,103 @@
+---
+title: "Sync companies from your system"
+description: "Create or update companies from another system without making duplicates."
+---
+
+This recipe upserts companies: it updates a company Heliyos already has and creates the ones it does not. It uses three endpoints: [List records](/api-reference/records/list-records), [Create a record](/api-reference/records/create-a-record) and [Update a record](/api-reference/records/update-a-record).
+
+<Steps>
+  <Step title="Get the companies object id">
+    Call [List objects](/api-reference/schemas/list-objects) once and keep the `id` of the object whose `objectType` is `company`. It does not change.
+  </Step>
+  <Step title="Look the company up">
+    Match on a stable value, such as the website, rather than on the name. `equals` on text ignores case:
+
+    ```bash
+    curl -G "https://api-prod.heliyos.ai/v1/platform/base-schemas/$COMPANIES_ID/records" \
+      -H "Authorization: Bearer $HELIYOS_API_KEY" \
+      --data-urlencode 'limit=1' \
+      --data-urlencode 'filters={
+        "filters": [
+          {
+            "field": "website",
+            "operator": "equals",
+            "value": "https://northwind.example"
+          }
+        ]
+      }'
+    ```
+
+    A match comes back in `data[0]`, with its id in `_id`.
+  </Step>
+  <Step title="Update or create">
+    If you found it, send only the changed fields:
+
+    ```bash
+    curl -X PATCH "https://api-prod.heliyos.ai/v1/platform/records/$RECORD_ID" \
+      -H "Authorization: Bearer $HELIYOS_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "data": {
+          "company_name": "Northwind Traders"
+        }
+      }'
+    ```
+
+    If not, create it:
+
+    ```bash
+    curl "https://api-prod.heliyos.ai/v1/platform/base-schemas/$COMPANIES_ID/records" \
+      -H "Authorization: Bearer $HELIYOS_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "company_name": "Northwind Traders",
+        "website": "https://northwind.example"
+      }'
+    ```
+  </Step>
+  <Step title="Handle a duplicate">
+    A company whose `website` already exists answers `409 CONFLICT`. Treat it as "already there": look it up again and update it instead.
+  </Step>
+</Steps>
+
+## A complete script
+
+```python sync_companies.py
+import json, os, time, requests
+
+API = "https://api-prod.heliyos.ai/v1/platform"
+S = requests.Session()
+S.headers["Authorization"] = f"Bearer {os.environ['HELIYOS_API_KEY']}"
+
+def call(method, path, **kw):
+    for attempt in range(5):
+        r = S.request(method, f"{API}{path}", timeout=30, **kw)
+        if r.status_code == 429:
+            time.sleep(int(r.headers.get("Retry-After", "1")))
+            continue
+        if r.status_code >= 500:
+            time.sleep(2 ** attempt)
+            continue
+        return r
+    r.raise_for_status()
+
+companies_id = next(o["id"] for o in call("GET", "/base-schemas").json()["data"] if o["objectType"] == "company")
+
+def upsert(name, website):
+    match_by_site = {"filters": [{"field": "website", "operator": "equals", "value": website}]}
+    hits = call("GET", f"/base-schemas/{companies_id}/records", params={"limit": 1, "filters": json.dumps(match_by_site)}).json()["data"]
+    if hits:
+        return call("PATCH", f"/records/{hits[0]['_id']}", json={"data": {"company_name": name}}).json()["data"]
+    r = call("POST", f"/base-schemas/{companies_id}/records", json={"company_name": name, "website": website})
+    if r.status_code == 409:
+        return None  # created by another process in the meantime; the next run will update it
+    r.raise_for_status()
+    return r.json()["data"]
+
+for name, website in [("Northwind Traders", "https://northwind.example"), ("Contoso", "https://contoso.example")]:
+    upsert(name, website)
+```
+
+<Tip>
+  Each lookup and write counts toward the [60 requests a minute](/api-reference/rate-limits) limit. For thousands of companies, run the sync in the background and let the `429` handling pace it.
+</Tip>

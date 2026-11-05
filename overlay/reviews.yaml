@@ -1,0 +1,650 @@
+tag:
+  name: Reviews
+  icon: /icons/tasks.svg
+  order: 75
+  description: >-
+    Reviews keep the team in control of consequential work. When a worker wants to send an email, change a
+    deal, book a meeting, act in a connected app or needs a person's answer, the action waits as a review
+    until someone approves or rejects it.
+
+components:
+  ReviewObjectRef:
+    type: object
+    description: A record or task the review is about.
+    additionalProperties: true
+    properties:
+      objectId:
+        type: string
+        description: Id of the record or task.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+      objectType:
+        type: string
+        nullable: true
+        description: "`company`, `people`, `deals`, a custom object's type, or `task`."
+        example: company
+      name:
+        type: string
+        description: The record's display name, when the worker could resolve it.
+        example: Northwind Traders
+
+  ReviewApproval:
+    type: object
+    description: The decision. This is the review's authoritative status.
+    properties:
+      status:
+        type: string
+        enum: [PENDING, PROCESSING, APPROVED, REJECTED]
+        description: |
+          - `PENDING`: waiting for a person.
+          - `PROCESSING`: a decision on a `deal_update` or `classification_label` review is being applied right now. It moves to `APPROVED` or `REJECTED` within the same request, or back to `PENDING` if applying failed.
+          - `APPROVED`: approved by a person, or let through by the workspace's autopilot settings (then `by` is `autopilot`).
+          - `REJECTED`: rejected by a person.
+      by:
+        type: string
+        nullable: true
+        description: >-
+          Id of the user who decided. A decision made with an API key is recorded under the user who created
+          the key. `autopilot` when the workspace's autopilot settings approved the action without a person.
+          Null while pending.
+        example: 66a0f1e2d3c4b5a697881111
+      at:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: When it was decided. Null while pending.
+      comment:
+        type: string
+        nullable: true
+        description: The reviewer's note, kept on the review.
+      feedback:
+        type: string
+        nullable: true
+        description: What the reviewer told the worker, for example why it was rejected.
+      editedArgs:
+        type: object
+        additionalProperties: true
+        description: The action's arguments as the reviewer changed them on approval, when they changed any.
+
+  Review:
+    type: object
+    description: >-
+      A worker action waiting for, or decided by, a person. Fields beyond the common ones depend on `type`.
+      Reviews raised before a field existed may not carry it.
+    additionalProperties: true
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      id:
+        type: string
+        description: The review's id, the same value as `_id`.
+        example: 6731f0a9b2c4d5e6f7a8b9c0
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the review belongs to.
+      type:
+        type: string
+        description: |
+          What is being reviewed. The set is open: actions in connected apps and actions your workspace defines
+          use their own name. Common values:
+          - `email_draft`: an email to send.
+          - `deal_update`: a deal to create (`dealAction: Create`) or change (`dealAction: Update`).
+          - `meeting_scheduled`: a meeting to book or reschedule.
+          - `task`: a task to create or change.
+          - `document`: a file to save on a record or task.
+          - `note`: a note to create.
+          - `object_create`, `object_update`: a record other than a deal to create or change.
+          - `schedule`: a scheduled wake-up for a worker to create or cancel.
+          - `plan`: a plan the worker wants approved before it acts.
+          - `decision`: a question the worker asked (`kind: question`) or an approval it asked for before going on.
+          - `classification_label`: a new label to create.
+        example: email_draft
+      kind:
+        type: string
+        description: |
+          - `action`: a paused action. Approving lets it run.
+          - `plan`: a plan. Approving lets the worker carry it out.
+          - `question`: a question for a person. Answer it in `feedback`.
+          - `approval`: a saved email draft. Approving sends it.
+        example: action
+      origin:
+        type: string
+        description: |
+          - `model`: the worker's run is paused on this action and resumes when it is decided.
+          - `artifact`: the work is already saved (an email draft on its thread) and the decision acts on it. The run does not wait for it.
+          - `autopilot`: the action ran without a person under the workspace's autopilot settings. Kept for the record, already `APPROVED`.
+        example: model
+      status:
+        type: string
+        enum: [PENDING, APPROVED, REJECTED]
+        description: The decision, mirrored from `approval.status`. Read `approval.status` for the current value.
+      approval: { $ref: "#/components/schemas/ReviewApproval" }
+      agent:
+        type: string
+        nullable: true
+        description: The name of the worker that raised the review.
+        example: Account researcher
+      agentRef:
+        type: object
+        description: The worker that raised the review.
+        properties:
+          id:
+            type: string
+            nullable: true
+            description: The worker's id. Null when Heliyos itself raised it.
+          name:
+            type: string
+            description: The worker's name.
+      runId:
+        type: string
+        nullable: true
+        description: >-
+          The run that raised the review. Read it with `GET /v1/platform/workers/runs/{id}`. A pending review a
+          later run proposed again points at that later run.
+        example: 0f1e2d3c4b5a69788766554433221100
+      agentRunId:
+        type: string
+        nullable: true
+        description: The same value as `runId`, under its older name.
+      previousRunId:
+        type: string
+        description: The run the review pointed at before a later run proposed the same change again.
+      revisions:
+        type: integer
+        description: How many times a later run replaced the proposal while the review was pending.
+      surface:
+        type: string
+        description: Where the run that raised it started, for example `chat` or `background`.
+      taskId:
+        type: string
+        nullable: true
+        description: The task the run worked on, when it worked on one.
+      threadId:
+        type: string
+        nullable: true
+        description: The chat conversation the run belongs to, when it started in chat.
+      tool:
+        type: object
+        description: The action the worker wants to take.
+        properties:
+          name:
+            type: string
+            description: The action's name, for example `send_email` or `schedule_meeting`.
+          callId:
+            type: string
+            description: Identifies this one call within the run.
+      proposal:
+        type: object
+        description: What the worker proposes.
+        properties:
+          title:
+            type: string
+            description: "A one-line title, for example `Send email: Renewal terms`."
+          summary:
+            type: string
+            nullable: true
+            description: The proposal in a sentence or two.
+          args:
+            type: object
+            additionalProperties: true
+            description: The action's arguments as the worker proposed them. Send changed values in `args` when you approve.
+      proposedOutput:
+        type: object
+        additionalProperties: true
+        description: The same arguments as `proposal.args`.
+      confidence:
+        type: number
+        nullable: true
+        description: How sure the worker said it was, from 0 to 100. Null when it did not say.
+        example: 72
+      reasoning:
+        type: string
+        description: Why the worker proposes the action, in its own words. Empty when it gave no reason.
+      approvalReason:
+        type: string
+        nullable: true
+        description: >-
+          Why the action waits for a person, for example because approval is required for this kind of action or
+          the stated confidence is below the workspace's threshold.
+      objectRef:
+        allOf: [{ $ref: "#/components/schemas/ReviewObjectRef" }]
+        description: The first of `objectRefs`.
+      objectRefs:
+        type: array
+        description: The records and tasks the review is about.
+        items: { $ref: "#/components/schemas/ReviewObjectRef" }
+      dealAction:
+        type: string
+        enum: [Create, Update]
+        description: "`deal_update`: whether the deal is new or an existing one changes. `meeting_scheduled`: `Create` for a new meeting, `Update` for a reschedule."
+      previousVersion:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: "`deal_update` with `Update`: the deal as it is now (`_id`, `data`, `relationships`). Null for a new deal."
+      newVersion:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: >-
+          `deal_update`: the deal as it would be if approved (`data`, `relationships`, and for a new deal the
+          `schemaId` of its pipeline). After an approval with edited fields, the fields as approved.
+      draftEmail:
+        type: object
+        additionalProperties: true
+        description: "`email_draft`: the email (`subject`, `body`, `from`, `to`, `cc`, `bcc`, `attachments`, and `interactionThreadId`, the email thread it belongs to). Recipients are email addresses or `{ email, name }` objects."
+      draft:
+        type: object
+        additionalProperties: true
+        description: "`email_draft` with `origin: artifact`: where the saved draft lives (`interactionId` of the email thread, `messageId`)."
+      meetingDetails:
+        type: object
+        additionalProperties: true
+        description: "`meeting_scheduled`: the proposed event (`title`, `startTime`, `endTime`, `timezone`, `participants`, `description`, `location`, `conferencing` and the rest of the event's fields)."
+      taskMeta:
+        type: object
+        additionalProperties: true
+        description: "`task`: the task (`title`, `objectId` of an existing task, `status`, `dueDate`, `description`)."
+      documentMeta:
+        type: object
+        additionalProperties: true
+        description: "`document`: the file (`fileName`, `description`, and when it can be opened, `url`, `mimeType`, `size`, `objectAttachmentId`)."
+      noteMeta:
+        type: object
+        additionalProperties: true
+        description: "`note`: the note (`title`, `content`)."
+      categoryName:
+        type: string
+        description: "`classification_label`: the name of the label to create."
+      categoryDescription:
+        type: string
+        description: "`classification_label`: the label's description."
+      outcome:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: >-
+          What happened after the decision. `ok` (whether it worked), `at`, and `error` when it failed. For an
+          action a run carried out, `result` with what the action returned. For a deal or label Heliyos applied
+          on approval, `appliedBy: platform` with `action`, `dealId` or `labelId`. Absent until something happened.
+      metadata:
+        type: object
+        description: When the review was raised and last changed.
+        properties:
+          created:
+            type: object
+            properties:
+              at: { $ref: "#/components/schemas/Timestamp" }
+          updated:
+            type: object
+            properties:
+              at: { $ref: "#/components/schemas/Timestamp" }
+
+  ReviewDetail:
+    description: A review, with the records and work it refers to resolved.
+    allOf:
+      - $ref: "#/components/schemas/Review"
+      - type: object
+        properties:
+          relatedObjects:
+            type: array
+            description: >-
+              The company, people and deal records the review is about: those in `objectRefs` and those linked to
+              the email thread or meeting it sits on. Full records, at most 50.
+            items: { type: object, additionalProperties: true }
+          interactionData:
+            type: object
+            nullable: true
+            additionalProperties: true
+            description: The email thread or meeting `objectRef` points at, when it points at one.
+          taskData:
+            type: object
+            nullable: true
+            additionalProperties: true
+            description: The task `taskMeta.objectId` (or `objectRef`) points at, when it points at one.
+          previousVersionRelatedObjects:
+            type: array
+            description: "`deal_update`: the records linked to the deal as it is now."
+            items: { type: object, additionalProperties: true }
+          newVersionRelatedObjects:
+            type: array
+            description: "`deal_update`: the records linked to the deal as proposed."
+            items: { type: object, additionalProperties: true }
+
+  ReviewDecisionResult:
+    type: object
+    properties:
+      status:
+        type: string
+        enum: [APPROVED, REJECTED]
+        description: The decision recorded.
+      review:
+        allOf: [{ $ref: "#/components/schemas/ReviewDetail" }]
+        description: The review after the decision.
+      applied:
+        type: object
+        additionalProperties: true
+        description: >-
+          Approved `deal_update` and `classification_label` reviews only: what Heliyos changed before answering.
+          For a deal, `action` (`Create` or `Update`), `dealId`, `schemaId` and `object` (the deal as saved).
+          For a label, `action` (`Create`, or `Exists` when a label with that name was already there), `labelId`
+          and `name`.
+      orchestrator:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: |
+          What the worker run did with the decision:
+          - `runId` and `resuming: true`: this was the last pending review of the run, which now resumes and carries out (or drops) the action.
+          - `runId` and `pending`: the run still waits on this many other reviews. Nothing runs until they are decided.
+          - `runId` alone: the run is no longer waiting, so nothing resumes.
+          - `sent`: for a saved email draft, whether it was sent.
+          - `error`: for a saved email draft, why sending or discarding failed. The decision is still recorded.
+      orchestratorError:
+        type: string
+        description: >-
+          Present when a deal or label change was applied and recorded but the worker run could not be told yet.
+          The run picks the decision up later on its own.
+
+operations:
+  listReviews:
+    summary: List reviews
+    description: |
+      Returns the workspace's reviews: worker actions waiting for a person, and the ones already decided. Without
+      `status`, every status is returned. To see what needs a person now, send `status=PENDING`.
+
+      By default the list pages with a cursor, newest review first: pass `limit`, then send
+      `meta.pagination.next_cursor` back as `cursor` for the next page. Sending `offset` or `page` (without
+      `cursor`) switches to offset paging, ordered by most recent activity, so a review a later run proposed again
+      moves up. Then `meta.pagination` is `{ page, limit, count, totalPages, hasMore }`.
+      See [Pagination](/api-reference/pagination).
+
+      Each item is the full review, as in Get a review, without the resolved records and work.
+    parameters:
+      limit:
+        description: Reviews per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. Takes precedence over `offset` and `page`.
+      page:
+        description: A page number, starting at 1, for offset paging. Skips `(page - 1) * limit` reviews. Ignored when `offset` is sent.
+      offset:
+        description: The number of reviews to skip, for offset paging.
+        example: 0
+      status:
+        description: |
+          Only reviews with this decision. Omit for all.
+          - `PENDING`: waiting for a person.
+          - `APPROVED`: approved by a person or by the workspace's autopilot settings.
+          - `REJECTED`: rejected by a person.
+        example: PENDING
+      type:
+        description: >-
+          Only reviews of this type, exact match, for example `email_draft` or `deal_update` (see `type` in the
+          response for the values). `decision` also matches older questions and approval requests stored under
+          other names. An unknown type returns an empty list.
+        example: email_draft
+      objectId:
+        description: >-
+          Only reviews about this record, task, email thread or file: a review matches when the id is one of its
+          records (`objectRefs`), its task, the email thread of its draft or the file it saves.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+      objectType:
+        description: Accepted with `objectId` for compatibility. It does not narrow the results further.
+        example: company
+      relationshipObjectId:
+        description: An older name for `objectId`. Ignored when `objectId` is sent.
+      relationshipObjectType:
+        description: An older name for `objectType`. Ignored when `objectType` is sent.
+    response:
+      description: A page of reviews.
+      message: Successful request
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/Review" }
+      example:
+        - _id: 6731f0a9b2c4d5e6f7a8b9c0
+          id: 6731f0a9b2c4d5e6f7a8b9c0
+          organizationId: 66a0f1e2d3c4b5a697887766
+          type: email_draft
+          kind: action
+          origin: model
+          status: PENDING
+          approval: { status: PENDING, by: null, at: null, comment: null, feedback: null }
+          agent: Account researcher
+          agentRef: { id: 6720a0b1c2d3e4f5a6b7c8d9, name: Account researcher }
+          runId: 0f1e2d3c4b5a69788766554433221100
+          taskId: 6729e1f2a3b4c5d6e7f80910
+          tool: { name: send_email, callId: call_7f3a9c2e }
+          proposal:
+            title: "Send email: Renewal terms for 2027"
+            summary: Send Dana Whitfield the renewal terms discussed on Tuesday's call.
+            args:
+              to: [dana.whitfield@northwind.example.com]
+              subject: Renewal terms for 2027
+              body: Hi Dana, as promised, here are the renewal terms we discussed on Tuesday.
+          confidence: 72
+          reasoning: Dana asked for the terms in writing by Friday.
+          approvalReason: Sending email requires approval in this workspace.
+          objectRef: { objectId: 66f1a8c3e4b0a1b2c3d4e5f6, objectType: company, name: Northwind Traders }
+          objectRefs:
+            - { objectId: 66f1a8c3e4b0a1b2c3d4e5f6, objectType: company, name: Northwind Traders }
+          draftEmail:
+            subject: Renewal terms for 2027
+            body: Hi Dana, as promised, here are the renewal terms we discussed on Tuesday.
+            to: [dana.whitfield@northwind.example.com]
+            isSend: true
+          metadata:
+            created: { at: "2026-11-04T09:30:00.000Z" }
+            updated: { at: "2026-11-04T09:30:00.000Z" }
+    errors:
+      "400": "VALIDATION_FAILED: a parameter is invalid, or the cursor is invalid."
+
+  getReview:
+    summary: Get a review
+    description: |
+      Returns one review with everything a person needs to decide it: the worker's proposal (`proposal`, and the
+      type's own fields such as `draftEmail` or `previousVersion` and `newVersion`), its `reasoning`, `confidence`
+      and `approvalReason`, the worker and run it came from (`agentRef`, `runId`), and the records it is about.
+
+      Unlike List reviews, the records and work the review refers to are resolved: `relatedObjects` holds the
+      company, people and deal records, `interactionData` the email thread or meeting, and `taskData` the task.
+      Once decided, `approval` holds the decision and `outcome` what happened.
+    parameters:
+      id:
+        description: The review's id.
+        example: 6731f0a9b2c4d5e6f7a8b9c0
+    response:
+      description: The review.
+      message: Successful request
+      data: { $ref: "#/components/schemas/ReviewDetail" }
+      example:
+        _id: 6731f2c4d5e6f7a8b9c0d1e2
+        id: 6731f2c4d5e6f7a8b9c0d1e2
+        organizationId: 66a0f1e2d3c4b5a697887766
+        type: deal_update
+        kind: action
+        origin: model
+        status: PENDING
+        approval: { status: PENDING, by: null, at: null, comment: null, feedback: null }
+        agent: Pipeline keeper
+        agentRef: { id: 6720a0b1c2d3e4f5a6b7c8da, name: Pipeline keeper }
+        runId: 1a2b3c4d5e6f708192a3b4c5d6e7f809
+        proposal:
+          title: "Update deal: Contoso expansion"
+          summary: Move the deal to Negotiation and raise the amount to 48,000.
+          args: { deal_id: 6730aa11bb22cc33dd44ee55, fields: { stage: Negotiation, amount: 48000 } }
+        confidence: 64
+        reasoning: Procurement confirmed the expanded seat count on the call.
+        approvalReason: The stated confidence is below the workspace's threshold.
+        objectRef: { objectId: 6730aa11bb22cc33dd44ee55, objectType: deals }
+        objectRefs:
+          - { objectId: 6730aa11bb22cc33dd44ee55, objectType: deals, name: Contoso expansion }
+        dealAction: Update
+        previousVersion:
+          _id: 6730aa11bb22cc33dd44ee55
+          data: { deal_name: Contoso expansion, stage: Proposal, amount: 36000 }
+          relationships: []
+        newVersion:
+          _id: 6730aa11bb22cc33dd44ee55
+          data: { deal_name: Contoso expansion, stage: Negotiation, amount: 48000 }
+          relationships: []
+        relatedObjects:
+          - _id: 6730aa11bb22cc33dd44ee55
+            objectType: deals
+            data: { deal_name: Contoso expansion, stage: Proposal, amount: 36000 }
+        previousVersionRelatedObjects: []
+        newVersionRelatedObjects: []
+        metadata:
+          created: { at: "2026-11-04T14:05:00.000Z" }
+          updated: { at: "2026-11-04T14:05:00.000Z" }
+    errors:
+      "404": "NOT_FOUND: no review with this id in the workspace."
+
+  createReviewDecision:
+    summary: Approve or reject a review
+    description: |
+      Records a person's decision on a pending review and acts on it. A review is decided once.
+
+      **Approving** carries out the worker's action:
+      - `deal_update` and `classification_label`: Heliyos applies the change before it answers, the same way an
+        edit in Heliyos would, and reports it in `applied`. If applying fails, nothing is recorded and the review
+        stays pending.
+      - A saved email draft (`origin: artifact`): the draft is sent before the call answers. If sending fails, the
+        approval is still recorded and `orchestrator.error` says why.
+      - Every other type: the worker's run resumes in the background and carries out the action. This happens only
+        once every pending review of that run is decided (`orchestrator.pending` counts the rest). Read the run, or
+        the review's `outcome`, to see the result. If the run is no longer waiting, the decision is recorded and
+        nothing runs.
+
+      **Rejecting** drops the action and tells the worker your `feedback`. A saved email draft is discarded. As
+      with approval, a paused run resumes, without the action, once every review it waits on is decided.
+
+      **Changing the proposal before approving.** For `deal_update`, send the fields to write in `data` (and
+      `relationships` or `schemaId`). For other paused actions, send the changed arguments in `args`. They are
+      checked by the same rules as the worker's; if they fail, the action does not run and `outcome.error`
+      says why. `data`, `relationships`, `schemaId` and `args` are ignored on rejection. A saved email draft is
+      sent as saved: `args` does not change it.
+
+      **Already decided.** A review that is not pending answers 400 and nothing happens, so sending a decision
+      again after it succeeded does not repeat the action. Send one decision at a time per review: of two
+      decisions sent at the same moment on a deal or label review, one wins and the other answers 409.
+
+      **Who can decide.** Any member of the workspace, and any API key. A decision made with an API key counts as
+      a person's: it is recorded under the user who created the key and carried out exactly as if that person
+      had approved it in Heliyos. Deciding is blocked while the workspace's subscription is inactive.
+
+      `meta.message` is `Review approved.` or `Review rejected.`. When a deal or label change was applied but the
+      run could not be told yet, it is `Review approved; the change is applied, but the agent run could not be
+      notified.` and `orchestratorError` is set: the run picks the decision up later on its own.
+    content: |
+      <Warning>
+        Approving through the API carries out the worker's action as if a person clicked Approve in Heliyos: the
+        email is sent, the deal is changed, the meeting is booked. It cannot be undone. Read the review with
+        Get a review first, and approve only what a person has confirmed.
+      </Warning>
+    parameters:
+      id:
+        description: The review's id.
+        example: 6731f2c4d5e6f7a8b9c0d1e2
+    requestBody:
+      schema:
+        type: object
+        required: [decision]
+        properties:
+          decision:
+            type: string
+            description: "`approved` carries out the action. `rejected` drops it."
+            example: approved
+          comment:
+            type: string
+            nullable: true
+            description: A note kept on the review, up to 5,000 characters. Empty or null stores nothing.
+            example: Confirmed with Dana by phone.
+          feedback:
+            type: string
+            nullable: true
+            description: >-
+              What to tell the worker, up to 5,000 characters: why you rejected it, what to change, or your answer
+              to a question (`kind: question`). Empty or null sends nothing.
+            example: Hold the email until legal signs off on the discount.
+          data:
+            type: object
+            additionalProperties: true
+            description: >-
+              `deal_update`, approving only: the deal's fields to write, as field key to value. Replaces the
+              worker's proposed fields, so include every field you want written. Validated against the deal's
+              object. Omit to write the proposal as it is.
+            example: { stage: Negotiation, amount: 45000 }
+          relationships:
+            type: array
+            description: >-
+              `deal_update`, approving only: ids of the company and people records to link to the deal, up to 500.
+              Omit, or send an empty list, to keep the links the worker proposed.
+            items: { $ref: "#/components/schemas/ObjectId" }
+          schemaId:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: >-
+              `deal_update` creating a deal, approving only: the pipeline (deal object) to create it in. Defaults
+              to the one the worker proposed. Must be a deal object of this workspace.
+          args:
+            type: object
+            additionalProperties: true
+            description: >-
+              A paused action, approving only: the arguments you changed, by name, as in `proposal.args`. They are
+              merged over the worker's arguments, so send only what changes.
+            example: { start: "2026-11-12T15:00:00", timezone: Europe/London }
+      examples:
+        approve:
+          summary: Approve as proposed
+          value: { decision: approved }
+        approveWithChanges:
+          summary: Approve a deal change with edited fields
+          value:
+            decision: approved
+            comment: Amount agreed on the call.
+            data: { stage: Negotiation, amount: 45000 }
+        reject:
+          summary: Reject and tell the worker why
+          value:
+            decision: rejected
+            feedback: Hold the email until legal signs off on the discount.
+    response:
+      description: The decision and the review after it.
+      message: Review approved.
+      data: { $ref: "#/components/schemas/ReviewDecisionResult" }
+      example:
+        status: APPROVED
+        applied:
+          action: Update
+          dealId: 6730aa11bb22cc33dd44ee55
+          schemaId: 66a0f1e2d3c4b5a697880003
+          object:
+            _id: 6730aa11bb22cc33dd44ee55
+            objectType: deals
+            data: { deal_name: Contoso expansion, stage: Negotiation, amount: 45000 }
+        orchestrator: { status: APPROVED, runId: 1a2b3c4d5e6f708192a3b4c5d6e7f809, resuming: true }
+        review:
+          _id: 6731f2c4d5e6f7a8b9c0d1e2
+          id: 6731f2c4d5e6f7a8b9c0d1e2
+          type: deal_update
+          status: APPROVED
+          approval:
+            status: APPROVED
+            by: 66a0f1e2d3c4b5a697881111
+            at: "2026-11-04T15:12:00.000Z"
+            comment: Amount agreed on the call.
+            feedback: null
+          outcome: { ok: true, at: "2026-11-04T15:12:00.000Z", appliedBy: platform, action: Update, dealId: 6730aa11bb22cc33dd44ee55 }
+    errors:
+      "400": >-
+        VALIDATION_FAILED: the body is invalid; the review is already decided (`Review is already approved.`,
+        `rejected` or `processing`); or, for a deal, the edited fields fail the deal object's validation, the
+        chosen pipeline is not a deal object, or the record is not a deal. Nothing is changed.
+      "403": "FORBIDDEN_ACTION: your role cannot decide reviews, or the workspace's subscription is inactive."
+      "404": "NOT_FOUND: no review with this id in the workspace, or the deal it changes (or that deal's object) no longer exists."
+      "409": "CONFLICT: another decision on this deal or label review is being applied. Read the review before trying again."
+      "422": >-
+        The deal or label review cannot be applied as stored: it names no deal to update, no pipeline to create the
+        deal in, or no label name. The review stays pending; reject it instead.
+      "500": >-
+        The decision could not be passed to the worker's run. Read the review before retrying: if it is still
+        `PENDING`, decide it again.

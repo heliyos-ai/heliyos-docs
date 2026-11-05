@@ -1,0 +1,307 @@
+tag:
+  name: Interactions
+  icon: /icons/app-inbox.svg
+  order: 42
+  description: >-
+    Email threads and meetings synced from connected mailboxes and calendars, linked to the people and
+    companies they involve.
+
+components:
+  InteractionMessage:
+    type: object
+    description: One message in an email thread.
+    additionalProperties: true
+    properties:
+      message_id:
+        type: string
+        description: The mail provider's message id.
+      thread_id:
+        type: string
+        description: The mail provider's thread id.
+      subject: { type: string, description: The message subject. }
+      snippet: { type: string, description: A short plain-text preview. }
+      body: { type: string, description: "The message body (HTML or text), when synced." }
+      date:
+        type: integer
+        description: When the message was sent, in Unix seconds.
+      from:
+        type: array
+        items: { type: object, properties: { name: { type: string }, email: { type: string } } }
+        description: Sender.
+      to:
+        type: array
+        items: { type: object, properties: { name: { type: string }, email: { type: string } } }
+        description: Recipients.
+      cc:
+        type: array
+        items: { type: object, additionalProperties: true }
+        description: Copied recipients.
+      unread: { type: boolean, description: Whether the message is unread in the mailbox. }
+      starred: { type: boolean, description: Whether the message is starred in the mailbox. }
+      attachments:
+        type: array
+        items: { type: object, additionalProperties: true }
+        description: Metadata for the files attached to the message.
+      agentGenerated: { type: boolean, description: True when a worker wrote this message. }
+      isDraft: { type: boolean, description: True for a worker's unsent draft. }
+
+  Interaction:
+    type: object
+    description: >-
+      A synced email thread (`channel.type` `email`) or calendar meeting (`channel.type` `meeting`).
+      Heliyos stores the provider's data and adds AI analysis. Fields depend on the channel and on
+      how far the analysis has got; treat every field except `_id`, `organizationId` and `channel`
+      as optional, and ignore fields you do not recognise.
+    additionalProperties: true
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace.
+      channel:
+        type: object
+        properties:
+          type:
+            type: string
+            enum: [email, meeting]
+            description: "`email` for an email thread, `meeting` for a calendar event."
+          email:
+            type: string
+            description: The connected mailbox or calendar the interaction was synced from.
+      integrationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The connected mailbox or calendar integration that synced it.
+      relationships:
+        type: array
+        description: >-
+          The records this interaction is linked to (matched from participants' addresses). Each
+          entry carries `objectId`, `objectType` and `schemaId`, plus `object`: the linked record's
+          `_id`, `objectType`, `baseSchemaId`, `isAgentAssigned` and all of its field values in `data`.
+        items:
+          type: object
+          additionalProperties: true
+          properties:
+            objectId: { $ref: "#/components/schemas/ObjectId" }
+            objectType: { type: string, description: "`company`, `people` or `deals`." }
+            schemaId: { type: string, nullable: true, description: The linked record's object id. }
+            object:
+              type: object
+              additionalProperties: true
+              description: The linked record. Absent when the record no longer exists.
+      categoryIds:
+        type: array
+        items: { type: string }
+        description: Ids of the labels applied to this interaction.
+      classificationLabels:
+        type: array
+        description: The labels in `categoryIds`, resolved (`_id`, `name`, `description`, `color`, `labels`).
+        items: { type: object, additionalProperties: true }
+      summary: { type: string, description: The AI summary. Empty until the interaction is analysed. }
+      sentiment:
+        type: string
+        nullable: true
+        description: >-
+          The other party's sentiment, written by the analysis. Usually `Positive`, `Negative`,
+          `Neutral`, `Excited` or `Do Not Contact`. Null until analysed.
+      sentimentReason: { type: string, description: Why the analysis chose that sentiment. }
+      isSummarized: { type: boolean, description: Whether the AI analysis has run. }
+      createdAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When Heliyos first synced it. Some older interactions store this as text.
+      lastMessageDate:
+        type: integer
+        description: The newest message time (email) or the start time (meeting), in Unix seconds.
+      subject: { type: string, description: "Email: the thread subject." }
+      thread_id: { type: string, description: "Email: the mail provider's thread id." }
+      threads:
+        type: array
+        description: "Email: the messages in the thread, oldest first."
+        items: { $ref: "#/components/schemas/InteractionMessage" }
+      title: { type: string, description: "Meeting: the event title." }
+      when:
+        type: object
+        description: "Meeting: start and end, in Unix seconds, with time zones."
+        properties:
+          start_time: { type: integer }
+          end_time: { type: integer }
+          start_timezone: { type: string }
+          end_timezone: { type: string }
+      participants:
+        type: array
+        description: "Meeting: invitees, each with `email` and `status`, the response as the calendar provider reports it (for example `yes`, `no` or `maybe`)."
+        items: { type: object, additionalProperties: true, properties: { email: { type: string }, status: { type: string } } }
+      creator:
+        type: object
+        description: "Meeting: who created the event (`name`, `email`)."
+        additionalProperties: true
+      conferencing:
+        type: object
+        description: "Meeting: the video provider and join details."
+        additionalProperties: true
+      meetingStatus:
+        type: string
+        description: >-
+          Meeting: where recording and analysis stand. One of `NOT_STARTED`, `IN_PROGRESS`,
+          `ANALYSING`, `COMPLETED`, `CANCELLED`, `RECORDING_NOT_PERMITTED`, `ABANDONED` or `ERROR`.
+      transcript:
+        type: array
+        description: "Meeting: the transcript, when the meeting was recorded."
+        items: { type: object, properties: { timestamp: { type: string }, speaker: { type: string }, dialogue: { type: string } } }
+      takeaways: { type: string, description: "Meeting: takeaways from the analysis." }
+      keyTakeaways: { type: string, description: "Meeting: key takeaways from the analysis." }
+      nextSteps:
+        description: "Meeting: next steps from the analysis, as text or a list."
+        oneOf:
+          - type: string
+          - type: array
+            items: {}
+
+operations:
+  listInteractions:
+    summary: List interactions
+    description: |
+      Returns the workspace's synced email threads and meetings, from every connected mailbox and
+      calendar, with their AI analysis and the records they are linked to. Each row is the full
+      interaction, including message bodies and meeting transcripts, so keep `limit` small.
+
+      By default the list pages with a cursor, newest synced first: pass `limit`, then send
+      `meta.pagination.next_cursor` back as `cursor`. A `sort`, or `page` (as a parameter or inside
+      `filters`), switches to page-number paging, where `meta.pagination` holds `page`, `limit`,
+      `totalPages`, `count` and `hasMore`. See [Pagination](/api-reference/pagination).
+
+      To list only the interactions linked to one record, send `{"objectId": "<record id>"}` in `filters`.
+    parameters:
+      limit:
+        description: Interactions per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. Only valid without a `sort` (a 400 otherwise). When you send both `cursor` and `page`, `cursor` wins.
+      page:
+        description: A page number, starting at 1, for page-number paging. Pages are `limit` interactions long.
+      filters:
+        description: |
+          A JSON object, URL-encoded. Keys:
+          - `objectId` (id): only interactions linked to this record.
+          - `channelType` (string or array): `email`, `meeting`, or both (an array or a comma-separated string).
+          - `categoryIds` (string or array): only interactions with any of these label ids.
+          - `search` (string): case-insensitive text match on the subject, title, summary, message
+            previews, takeaways, transcript and participant addresses.
+          - `uniqByRelationships` (any non-empty value): keep one interaction per distinct set of linked records.
+          - `sort` (array): `{ "field", "direction" }` with direction `asc` or `desc`. Useful fields:
+            `thread_date` (newest email message), `start_time` (meeting start), `createdAt` (when synced).
+          - `filters` (array): conditions `{ "field", "operator", "value", "conjunction" }`. Conditions with
+            `"conjunction": "and"` must all match. Conditions without it, or with `"or"`, are combined with OR,
+            so set `"conjunction": "and"` on every condition you need to hold. Operators: `equals`, `not_equals`,
+            `contains`, `not_contains`, `starts_with`, `ends_with`, `empty`, `not_empty`, `in`, `not_in`,
+            `greater_than`, `less_than`, `greater_than_equal`, `less_than_equal`, `after`, `before`, `between`
+            (value `{"startDate","endDate"}` as a JSON string), and `is` / `is_not` for `participants`.
+            Special fields: `channelType`, `categoryIds`, `participants` (meeting invitee addresses),
+            `hasAgentDraft` (true for threads holding a worker's unsent draft), and
+            `relationships.<objectType>.<field>` to match a linked record's field value, for example
+            `relationships.company.company_name`.
+          - `page` and `pageSize`: page-number paging. `pageSize` is capped at 200.
+        example: '{"objectId":"66f1a8c3e4b0a1b2c3d4e5f6","channelType":"email","sort":[{"field":"thread_date","direction":"desc"}]}'
+    response:
+      description: A page of interactions.
+      message: Meetings fetched successfully.
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/Interaction" }
+      example:
+        - _id: 6728b1c2d3e4f5a6b7c8d9e0
+          organizationId: 66a0f1e2d3c4b5a697887766
+          integrationId: 66a0f1e2d3c4b5a697885555
+          channel: { type: email, email: priya@example.com }
+          subject: Security questionnaire for Northwind Traders
+          thread_id: thr_7f3a9c
+          threads:
+            - message_id: msg_91b2
+              thread_id: thr_7f3a9c
+              subject: Security questionnaire for Northwind Traders
+              snippet: Hi Priya, attached is our standard questionnaire. Could you return it by Friday?
+              date: 1762250400
+              from: [{ name: Ana Silva, email: ana.silva@northwind.example.com }]
+              to: [{ name: Priya Patel, email: priya@example.com }]
+              cc: []
+              unread: false
+              starred: false
+          relationships:
+            - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+              objectType: company
+              schemaId: 66a0f1e2d3c4b5a697880001
+              object:
+                _id: 66f1a8c3e4b0a1b2c3d4e5f6
+                objectType: company
+                baseSchemaId: 66a0f1e2d3c4b5a697880001
+                isAgentAssigned: true
+                data: { company_name: Northwind Traders, domain: northwind.example.com }
+          categoryIds: []
+          classificationLabels: []
+          summary: Northwind sent its security questionnaire and wants it back by Friday.
+          sentiment: Positive
+          sentimentReason: The buyer is moving the deal forward.
+          isSummarized: true
+          createdAt: "2026-11-04T10:00:05.000Z"
+        - _id: 6728b1c2d3e4f5a6b7c8d9e1
+          organizationId: 66a0f1e2d3c4b5a697887766
+          integrationId: 66a0f1e2d3c4b5a697885556
+          channel: { type: meeting, email: priya@example.com }
+          title: Northwind Traders pricing review
+          when: { start_time: 1762329600, end_time: 1762331400, start_timezone: UTC, end_timezone: UTC }
+          participants:
+            - { email: priya@example.com, status: "yes" }
+            - { email: ana.silva@northwind.example.com, status: "yes" }
+          meetingStatus: NOT_STARTED
+          relationships: []
+          summary: ""
+          sentiment: null
+          isSummarized: false
+          createdAt: "2026-11-04T10:05:00.000Z"
+    errors:
+      "400": "VALIDATION_FAILED: `filters` is not a JSON object, has a malformed condition or `objectId`, or `cursor` was sent with a sort."
+
+  getInteraction:
+    summary: Get an interaction
+    description: |
+      Returns one email thread or meeting with every stored field: all messages and bodies for an
+      email, the transcript and analysis for a meeting, its labels, and the records it is linked to.
+    parameters:
+      id:
+        description: The interaction's id.
+        example: 6728b1c2d3e4f5a6b7c8d9e0
+    response:
+      description: The interaction.
+      message: Interaction fetched successfully.
+      data: { $ref: "#/components/schemas/Interaction" }
+      example:
+        _id: 6728b1c2d3e4f5a6b7c8d9e1
+        organizationId: 66a0f1e2d3c4b5a697887766
+        integrationId: 66a0f1e2d3c4b5a697885556
+        channel: { type: meeting, email: priya@example.com }
+        title: Northwind Traders pricing review
+        when: { start_time: 1762329600, end_time: 1762331400, start_timezone: UTC, end_timezone: UTC }
+        participants:
+          - { email: priya@example.com, status: "yes" }
+          - { email: ana.silva@northwind.example.com, status: "yes" }
+        creator: { name: Priya Patel, email: priya@example.com }
+        meetingStatus: COMPLETED
+        transcript:
+          - { timestamp: "00:01:12", speaker: Ana Silva, dialogue: We can commit to the Growth plan if the security review passes. }
+        takeaways: Budget confirmed for Q1. Security review is the last blocker.
+        nextSteps: Send the security questionnaire answers by Friday.
+        relationships:
+          - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            objectType: company
+            schemaId: 66a0f1e2d3c4b5a697880001
+            object:
+              _id: 66f1a8c3e4b0a1b2c3d4e5f6
+              objectType: company
+              baseSchemaId: 66a0f1e2d3c4b5a697880001
+              data: { company_name: Northwind Traders }
+        summary: Pricing review with Northwind Traders. Budget is confirmed and the security review is the last step.
+        sentiment: Positive
+        isSummarized: true
+        createdAt: "2026-11-04T10:05:00.000Z"
+    errors:
+      "404": "NOT_FOUND: no interaction with this id in the workspace."

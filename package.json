@@ -1,0 +1,34 @@
+{
+  "name": "heliyos-docs",
+  "private": true,
+  "description": "Heliyos API and MCP documentation (Mintlify).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dump:mcp": "node scripts/dump-mcp-tools.mjs",
+    "build:openapi": "node scripts/build-openapi.mjs",
+    "build:mcp": "node scripts/build-mcp-pages.mjs",
+    "build": "npm run build:icons && npm run dump:mcp && npm run build:openapi && npm run build:mcp && npm run build:llms",
+    "check": "node scripts/build-openapi.mjs --check && node scripts/build-llms.mjs --check && node scripts/check-content.mjs && mint broken-links",
+    "dev": "mint dev",
+    "build:icons": "node scripts/build-icons.mjs",
+    "check:content": "node scripts/check-content.mjs",
+    "prebuild": "node scripts/require-node.mjs",
+    "precheck": "node scripts/require-node.mjs",
+    "predev": "node scripts/require-node.mjs",
+    "build:llms": "node scripts/build-llms.mjs",
+    "check:docs": "node scripts/build-llms.mjs --check && node scripts/check-content.mjs && mint broken-links",
+    "precheck:docs": "node scripts/require-node.mjs"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "^10.1.1",
+    "@hugeicons/core-free-icons": "^4.4.0",
+    "devicon": "^2.16.0",
+    "js-yaml": "^4.1.0",
+    "mint": "^4.2.0",
+    "simple-icons": "^16.36.0",
+    "simple-icons-v13": "npm:simple-icons@^13.21.0"
+  }
+}

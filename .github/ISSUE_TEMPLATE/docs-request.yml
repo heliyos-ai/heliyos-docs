@@ -1,0 +1,42 @@
+name: Request docs
+description: Ask for a guide, an example or an explanation the docs do not have yet.
+title: "[Request]: "
+labels: ["docs", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tell us what you are trying to build and where the docs left you stuck.
+        To ask for a new endpoint or MCP tool, rather than docs for an existing one, email soham@heliyos.ai.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What would help
+      options:
+        - A guide or recipe for a task
+        - An example for an endpoint or tool
+        - A clearer explanation of a concept
+        - Setup steps for another MCP client
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What you are trying to do
+      description: The task or integration you are working on.
+      placeholder: Sync deals from our billing system and attach the latest invoice as a file.
+    validations:
+      required: true
+  - type: textarea
+    id: gap
+    attributes:
+      label: Where the docs fall short
+      description: Pages you read and what was missing.
+    validations:
+      required: true
+  - type: input
+    id: pages
+    attributes:
+      label: Related pages
+      placeholder: https://docs.heliyos.ai/guides/sync-companies

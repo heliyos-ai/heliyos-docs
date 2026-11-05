@@ -1,0 +1,385 @@
+/*
+ * Heliyos brand layer for Mintlify. Every colour is a Heliyos brand token.
+ * Light: parchment canvas, paper cards, graphite text, sun to guide the eye.
+ * Dark: the graphite field (graphite canvas, graphite-lift cards, slate lines, linen text).
+ */
+@font-face { font-family: "Gambetta"; src: url("/fonts/Gambetta-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Gambetta"; src: url("/fonts/Gambetta-Italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Geist"; src: url("/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Geist"; src: url("/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Geist"; src: url("/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+
+/* ------------------------------------------------------------------ tokens */
+:root {
+  --hy-canvas: #FAF7F3;        /* parchment */
+  --hy-surface: #FEFDFB;       /* paper: cards, panels */
+  --hy-zone: #F3EEE6;          /* linen: hover, wells */
+  --hy-line: #E1DCD3;          /* hairline */
+  --hy-line-strong: #D1CBC2;   /* rule */
+  --hy-text: #27251E;          /* graphite */
+  --hy-text-body: #4A4742;     /* slate */
+  --hy-text-muted: #6D6A64;    /* dusk */
+  --hy-code-bg: #27251E;       /* graphite field */
+  --hy-code-line: #3A372F;     /* graphite-lift */
+  --hy-sun: #FFD037;
+  --hy-sun-soft: #FFE58F;
+  --hy-sun-wash: #FBF1C7;
+  --hy-sun-deep: #EBB427;
+  --hy-sun-ink: #815C0A;
+  --hy-ink: #14120F;
+  --hy-icon-filter: none;
+  /* HTTP verbs: signal and label families */
+  --hy-get-bg: #E5F5E7;   --hy-get-fg: #287C42;   --hy-get-edge: #B6DDBD;
+  --hy-post-bg: #E5F2FF;  --hy-post-fg: #2D5277;  --hy-post-edge: #BBD6F3;
+  --hy-put-bg: #F4ECFE;   --hy-put-fg: #594571;   --hy-put-edge: #DACBEE;
+  --hy-patch-bg: #FFECDC; --hy-patch-fg: #9C5313; --hy-patch-edge: #F6C6A0;
+  --hy-del-bg: #FFEAE7;   --hy-del-fg: #B8433A;   --hy-del-edge: #F6C3BB;
+  /* callouts */
+  --hy-warn-bg: #FFECDC;  --hy-warn-fg: #9C5313;  --hy-warn-edge: #F6C6A0;
+  --hy-ok-bg: #E5F5E7;    --hy-ok-fg: #287C42;    --hy-ok-edge: #B6DDBD;
+  --hy-bad-bg: #FFEAE7;   --hy-bad-fg: #B8433A;   --hy-bad-edge: #F6C3BB;
+}
+
+html.dark {
+  --hy-canvas: #1E1C17;
+  --hy-surface: #27251E;       /* graphite */
+  --hy-zone: #3A372F;          /* graphite-lift */
+  --hy-line: #3A372F;
+  --hy-line-strong: #4A4742;   /* slate */
+  --hy-text: #F3EEE6;          /* linen */
+  --hy-text-body: #EBE5DB;     /* sand */
+  --hy-text-muted: #A9A49B;    /* wire */
+  --hy-code-bg: #14120F;       /* ink */
+  --hy-code-line: #3A372F;
+  --hy-sun-ink: #FFE58F;
+  --hy-icon-filter: invert(0.93) sepia(0.08);
+  --hy-get-bg: rgba(60, 154, 88, 0.18);    --hy-get-fg: #B6DDBD;   --hy-get-edge: rgba(60, 154, 88, 0.45);
+  --hy-post-bg: rgba(85, 138, 192, 0.2);   --hy-post-fg: #BBD6F3;  --hy-post-edge: rgba(85, 138, 192, 0.5);
+  --hy-put-bg: rgba(148, 118, 183, 0.2);   --hy-put-fg: #DACBEE;   --hy-put-edge: rgba(148, 118, 183, 0.5);
+  --hy-patch-bg: rgba(219, 125, 36, 0.18); --hy-patch-fg: #F6C6A0; --hy-patch-edge: rgba(219, 125, 36, 0.45);
+  --hy-del-bg: rgba(208, 90, 79, 0.2);     --hy-del-fg: #F6C3BB;   --hy-del-edge: rgba(208, 90, 79, 0.5);
+  --hy-warn-bg: rgba(219, 125, 36, 0.14);  --hy-warn-fg: #F6C6A0;  --hy-warn-edge: rgba(219, 125, 36, 0.4);
+  --hy-ok-bg: rgba(60, 154, 88, 0.14);     --hy-ok-fg: #B6DDBD;    --hy-ok-edge: rgba(60, 154, 88, 0.4);
+  --hy-bad-bg: rgba(208, 90, 79, 0.16);    --hy-bad-fg: #F6C3BB;   --hy-bad-edge: rgba(208, 90, 79, 0.45);
+}
+
+/* ------------------------------------------------------------------ type and canvas */
+body, button, input, select, textarea { font-family: "Geist", system-ui, sans-serif; }
+code, pre, kbd, .font-mono { font-family: "Geist Mono", ui-monospace, monospace !important; }
+body { background: var(--hy-canvas) !important; color: var(--hy-text); }
+.prose { color: var(--hy-text-body); }
+.prose h1, .prose h2, .prose h3, .prose h4, .prose strong, #page-title { color: var(--hy-text) !important; }
+.prose h2 { letter-spacing: -0.01em; }
+
+/* Links: body colour, sun-deep underline that turns graphite on hover. */
+.prose a:not([class]) {
+  color: var(--hy-text);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--hy-sun-deep);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  border-bottom: none;
+}
+.prose a:not([class]):hover { text-decoration-color: var(--hy-text); }
+
+/* Icons are graphite Hugeicons; flip them on the graphite field. */
+img[src^="/icons/"] { filter: var(--hy-icon-filter); }
+
+/* ------------------------------------------------------------------ navigation */
+/* Tabs: muted labels, graphite and semibold when active, with a sun-deep underline. */
+.nav-tabs-item { color: var(--hy-text-muted) !important; }
+.nav-tabs-item:hover { color: var(--hy-text) !important; }
+.nav-tabs-item[data-active="true"] { color: var(--hy-text) !important; font-weight: 600; }
+/* Mintlify's own active-tab bar, in sun-deep in both modes. */
+.nav-tabs-item [class*="bottom-0"][class*="bg-primary"] { background: var(--hy-sun-deep) !important; height: 2px !important; border-radius: 2px; }
+
+/* Sidebar items: linen hover; the selected item is darker sun with ink text. */
+#sidebar-content a { border-radius: 8px; transition: background-color .12s ease; }
+#sidebar-content a:not([aria-current="page"]):hover { background: var(--hy-zone); color: var(--hy-text) !important; }
+#sidebar-content a[aria-current="page"] {
+  background: var(--hy-sun-deep) !important;
+  color: var(--hy-ink) !important;
+  border-color: var(--hy-sun-deep) !important;
+  font-weight: 600;
+  text-shadow: none !important;
+}
+#sidebar-content a[aria-current="page"] img[src^="/icons/"] { filter: none; }
+/* The method pill inside the selected item: ink pill with sun text. */
+#sidebar-content a[aria-current="page"] [class*="bg-[#"] { background: var(--hy-ink) !important; color: var(--hy-sun) !important; box-shadow: none; }
+
+/* ------------------------------------------------------------------ HTTP verb badges */
+[class*="bg-green-400/20"]  { background: var(--hy-get-bg) !important;   color: var(--hy-get-fg) !important;   box-shadow: inset 0 0 0 1px var(--hy-get-edge); }
+[class*="bg-blue-400/20"]   { background: var(--hy-post-bg) !important;  color: var(--hy-post-fg) !important;  box-shadow: inset 0 0 0 1px var(--hy-post-edge); }
+[class*="bg-purple-400/20"], [class*="bg-yellow-400/20"]
+                            { background: var(--hy-put-bg) !important;   color: var(--hy-put-fg) !important;   box-shadow: inset 0 0 0 1px var(--hy-put-edge); }
+[class*="bg-orange-400/20"] { background: var(--hy-patch-bg) !important; color: var(--hy-patch-fg) !important; box-shadow: inset 0 0 0 1px var(--hy-patch-edge); }
+[class*="bg-red-400/20"]    { background: var(--hy-del-bg) !important;   color: var(--hy-del-fg) !important;   box-shadow: inset 0 0 0 1px var(--hy-del-edge); }
+.method-pill { letter-spacing: 0.02em; }
+
+/* ------------------------------------------------------------------ cards */
+.card {
+  background: var(--hy-surface) !important;
+  border-color: var(--hy-line) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.card:hover {
+  border-color: var(--hy-sun-deep) !important;
+  box-shadow: 0 8px 24px -8px rgba(39,37,30,.18), 0 2px 4px rgba(39,37,30,.05) !important;
+}
+/* The card's icon sits on a sun-wash tile. */
+.card [class*="size-6"]:has(> img) {
+  width: 40px !important; height: 40px !important; display: grid; place-items: center;
+  background: var(--hy-sun-wash); border: 1px solid var(--hy-sun-soft); border-radius: 10px;
+}
+html.dark .card [class*="size-6"]:has(> img) { background: rgba(255, 208, 55, 0.12); border-color: rgba(255, 208, 55, 0.3); }
+.card [class*="size-6"]:has(> img) img { width: 22px !important; height: 22px !important; }
+.card h2 { color: var(--hy-text) !important; }
+
+/* ------------------------------------------------------------------ code */
+.prose :not(pre) > code {
+  background: var(--hy-zone);
+  border: 1px solid var(--hy-line);
+  border-radius: 7px;
+  padding: 1px 6px;
+  color: var(--hy-text);
+  font-size: 0.875em;
+}
+.code-block, [class*="code-block"] {
+  background: var(--hy-code-bg) !important;
+  border-color: var(--hy-code-line) !important;
+  border-radius: 12px !important;
+}
+
+/* ------------------------------------------------------------------ tables */
+.prose table { border-color: var(--hy-line); }
+.prose thead th {
+  background: var(--hy-zone); color: var(--hy-text-muted);
+  font-family: "Geist Mono", ui-monospace, monospace; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.prose td, .prose th { border-color: var(--hy-line); }
+
+/* ------------------------------------------------------------------ callouts */
+.callout { border-radius: 12px !important; }
+.callout[data-callout-type="note"], .callout[data-callout-type="info"] {
+  background: var(--hy-sun-wash) !important; border-color: var(--hy-sun-soft) !important; color: var(--hy-text) !important;
+  box-shadow: inset 3px 0 0 var(--hy-sun-deep);
+}
+html.dark .callout[data-callout-type="note"], html.dark .callout[data-callout-type="info"] { background: rgba(255,208,55,0.10) !important; border-color: rgba(255,208,55,0.3) !important; }
+.callout[data-callout-type="warning"] { background: var(--hy-warn-bg) !important; border-color: var(--hy-warn-edge) !important; color: var(--hy-warn-fg) !important; }
+.callout[data-callout-type="tip"], .callout[data-callout-type="check"] { background: var(--hy-ok-bg) !important; border-color: var(--hy-ok-edge) !important; color: var(--hy-ok-fg) !important; }
+.callout[data-callout-type="danger"] { background: var(--hy-bad-bg) !important; border-color: var(--hy-bad-edge) !important; color: var(--hy-bad-fg) !important; }
+.callout * { color: inherit; }
+.callout code { background: rgba(255,255,255,.55) !important; }
+html.dark .callout code { background: rgba(0,0,0,.25) !important; }
+
+/* ------------------------------------------------------------------ buttons */
+/* "Try it": the sun call to action, ink label, lifted. */
+.tryit-button {
+  background: var(--hy-sun) !important;
+  color: var(--hy-ink) !important;
+  font-weight: 600;
+  border: 1px solid var(--hy-sun-deep);
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 2px rgba(20,18,15,.28);
+}
+.tryit-button:hover { opacity: 1 !important; background: var(--hy-sun-deep) !important; }
+.tryit-button svg, .tryit-button path { fill: var(--hy-ink) !important; color: var(--hy-ink) !important; }
+
+/* Navbar primary ("Open Heliyos"): lifted graphite; sun on the graphite field. */
+#navbar ul > li:not(.navbar-link) > a {
+  background: linear-gradient(180deg, #3A372F, #27251E);
+  color: #F3EEE6 !important;
+  border: 1px solid #14120F;
+  border-radius: 8px;
+  padding: 6px 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 1px 2px rgba(20,18,15,.28);
+}
+#navbar ul > li:not(.navbar-link) > a * { color: inherit !important; }
+html.dark #navbar ul > li:not(.navbar-link) > a { background: var(--hy-sun); color: var(--hy-ink) !important; border-color: var(--hy-sun-deep); }
+
+/* Focus: 2px ring with an offset. Graphite on light, linen on dark. Never sun, never blue. */
+a:focus-visible, button:focus-visible, [role="tab"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--hy-canvas), 0 0 0 4px var(--hy-text) !important;
+  border-radius: 8px;
+}
+
+/* ------------------------------------------------------------------ introduction hero */
+body:has(.hy-hero) #header { display: none; }
+.hy-hero { padding: 8px 0 24px; }
+.hy-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: "Geist Mono", ui-monospace, monospace; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.05em; color: var(--hy-sun-ink); margin: 0 0 16px;
+  background: var(--hy-sun-wash); border: 1px solid var(--hy-sun-soft); border-radius: 999px; padding: 4px 10px;
+}
+html.dark .hy-eyebrow { background: rgba(255,208,55,0.12); border-color: rgba(255,208,55,0.3); }
+.hy-display {
+  font-family: "Gambetta", Georgia, serif !important;
+  font-weight: 400 !important;
+  font-size: 56px !important;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--hy-text) !important;
+  margin: 0 0 16px;
+}
+/* The closing italic phrase: emphasis by type alone. */
+.hy-display em {
+  font-style: italic;
+}
+.hy-lede { font-size: 17px; line-height: 1.6; color: var(--hy-text-body); max-width: 720px; margin: 0; }
+@media (max-width: 640px) { .hy-display { font-size: 40px !important; line-height: 1.1; letter-spacing: -0.015em; } }
+
+/* Respect reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Step numbers: sun discs with ink numerals; the connecting line in sun-deep. */
+[class*="group/step-indicator"] {
+  background: var(--hy-sun) !important;
+  color: var(--hy-ink) !important;
+  box-shadow: inset 0 0 0 1px var(--hy-sun-deep);
+}
+.steps [class*="border-l"], .steps [class*="w-px"] { border-color: var(--hy-sun-soft) !important; background-color: var(--hy-sun-soft); }
+html.dark .steps [class*="border-l"], html.dark .steps [class*="w-px"] { border-color: rgba(255,208,55,0.3) !important; background-color: rgba(255,208,55,0.3); }
+
+/* ------------------------------------------------------------------ layout */
+/* Pages in a group sit indented under the group heading (past its icon), in every tab. */
+#sidebar-content ul.sidebar-group > li > a { margin-left: 22px; }
+#sidebar-content .sidebar-group-header { color: var(--hy-text) !important; font-weight: 600; }
+
+/*
+ * The sidebar stays put: pinned under the navbar with its own scroll, so the full-width footer
+ * never drags it up. Only the page in the middle scrolls. The content and footer leave room for it.
+ */
+@media (min-width: 1024px) {
+  #sidebar-content {
+    position: fixed !important;
+    left: 0;
+    top: calc(var(--mintlify-slot-header-height, 7rem) + var(--banner-height, 0px)) !important;
+    height: calc(100vh - var(--mintlify-slot-header-height, 7rem) - var(--banner-height, 0px)) !important;
+    width: var(--sidebar-width, 19rem);
+    z-index: 20;
+    background: var(--hy-canvas);
+  }
+  div:has(> #sidebar-content) { padding-left: var(--sidebar-width, 19rem); }
+  footer.advanced-footer, .advanced-footer { padding-left: var(--sidebar-width, 19rem); }
+}
+
+/* ------------------------------------------------------------------ MCP install picker */
+.hy-picker { margin: 24px 0; border: 1px solid var(--hy-line); border-radius: 16px; background: var(--hy-surface); overflow: hidden; }
+.hy-picker-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border-bottom: 1px solid var(--hy-line); }
+.hy-picker-tab {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px; text-align: left; cursor: pointer;
+  background: transparent; border: 0; border-right: 1px solid var(--hy-line); border-bottom: 1px solid var(--hy-line);
+  margin-bottom: -1px; box-shadow: inset 0 2px 0 transparent; transition: background-color .12s ease;
+}
+.hy-picker-tab:hover { background: var(--hy-zone); }
+.hy-picker-tab.is-active { background: var(--hy-sun-wash); box-shadow: inset 0 2px 0 var(--hy-sun-deep); }
+html.dark .hy-picker-tab.is-active { background: rgba(255,208,55,0.12); }
+.hy-picker-logo {
+  width: 32px; height: 32px; flex-shrink: 0; display: grid; place-items: center;
+  background: #FEFDFB; border: 1px solid #E1DCD3; border-radius: 8px;
+}
+.hy-picker-logo img { width: 18px; height: 18px; filter: none !important; }
+.hy-picker-label { display: flex; flex-direction: column; min-width: 0; }
+.hy-picker-name { font-size: 14px; font-weight: 600; color: var(--hy-text); }
+.hy-picker-hint { font-size: 12px; color: var(--hy-text-muted); }
+.hy-picker-panel { padding: 8px 20px 12px; }
+.hy-picker-step { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--hy-line); }
+.hy-picker-step:first-child { border-top: 0; }
+.hy-picker-num {
+  width: 24px; height: 24px; flex-shrink: 0; border-radius: 999px; display: grid; place-items: center;
+  background: var(--hy-sun); color: var(--hy-ink); font-size: 12px; font-weight: 600; box-shadow: inset 0 0 0 1px var(--hy-sun-deep);
+}
+.hy-picker-body { flex: 1; min-width: 0; }
+.hy-picker-title { margin: 2px 0 4px; font-size: 14px; font-weight: 600; color: var(--hy-text); }
+.hy-picker-text { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--hy-text-body); }
+.hy-picker-code { position: relative; }
+.hy-picker-code pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto; border-radius: 10px;
+  background: var(--hy-code-bg); color: #F3EEE6; font-size: 12.5px; line-height: 1.6;
+}
+.hy-picker-code code { background: none !important; border: 0 !important; padding: 0 !important; color: inherit !important; white-space: pre; }
+.hy-picker-copy {
+  position: absolute; top: 8px; right: 8px; padding: 3px 10px; border-radius: 7px; cursor: pointer;
+  font-size: 12px; font-weight: 500; color: #F3EEE6; background: #3A372F; border: 1px solid #4A4742;
+}
+.hy-picker-copy:hover { background: #45423A; }
+.hy-picker-link {
+  display: inline-flex; align-items: center; margin-top: 2px; padding: 6px 12px; border-radius: 8px;
+  background: var(--hy-sun); color: var(--hy-ink) !important; font-size: 13px; font-weight: 600; text-decoration: none !important;
+  border: 1px solid var(--hy-sun-deep);
+}
+.hy-picker-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hy-picker-tab:last-child:nth-child(4n + 3) { grid-column: span 2; }
+.hy-picker-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) {
+  .hy-picker-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hy-picker-tab:last-child:nth-child(4n + 3) { grid-column: auto; }
+}
+
+/* ------------------------------------------------------------------ theme switch, top right */
+@media (min-width: 1024px) {
+  #sidebar-content div:has(> div > button[aria-label="Switch to dark theme"]) {
+    position: fixed;
+    top: 12px;
+    right: 20px;
+    width: auto;
+    padding: 0;
+    border: 0;
+    z-index: 60;
+  }
+  #sidebar-content div:has(> button[aria-label="Switch to dark theme"]) {
+    height: 32px;
+    background: var(--hy-surface);
+    border-color: var(--hy-line) !important;
+  }
+  /* Leave room for it after the navbar links and the Open Heliyos button. */
+  
+}
+/* The theme switch lives inside the sidebar, so the sidebar must stack above the navbar for it to show. */
+@media (min-width: 1024px) { #sidebar-content { z-index: 40 !important; } }
+.hy-picker-name { white-space: normal; font-size: 13.5px; line-height: 1.25; }
+
+/* Picker header: a line of context and the link to every install option. */
+.hy-picker-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 24px 0 10px; font-size: 14px; color: var(--hy-text-muted); }
+.hy-picker-head a { color: var(--hy-text) !important; font-weight: 500; text-decoration: underline; text-decoration-color: var(--hy-sun-deep); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.hy-picker-head + .hy-picker { margin-top: 0; }
+/* Four featured clients fit one row. */
+.hy-picker-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hy-picker-tab:last-child { border-right: 0; }
+/* One client per section on the all install options page. */
+.hy-client { margin: 12px 0 20px; }
+.hy-client-head { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--hy-line); background: var(--hy-sun-wash); box-shadow: inset 0 2px 0 var(--hy-sun-deep); }
+html.dark .hy-client-head { background: rgba(255,208,55,0.10); }
+.hy-picker-code pre { padding-right: 76px; }
+
+/* GitHub and LinkedIn in the navbar: icons only; the label stays for screen readers. */
+#navbar a[href="https://github.com/heliyos-ai"] .truncate,
+#navbar a[href*="linkedin.com/company/heliyos"] .truncate {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+#navbar a[href="https://github.com/heliyos-ai"],
+#navbar a[href*="linkedin.com/company/heliyos"] { padding: 6px; border-radius: 8px; }
+#navbar a[href="https://github.com/heliyos-ai"]:hover,
+#navbar a[href*="linkedin.com/company/heliyos"]:hover { background: var(--hy-zone); }
+#navbar a[href="https://github.com/heliyos-ai"] svg,
+#navbar a[href*="linkedin.com/company/heliyos"] svg { width: 18px; height: 18px; }
+
+/* Navbar right side: Join waitlist, then GitHub and LinkedIn side by side, then the theme switch. */
+#navbar ul:has(> li.navbar-link) { gap: 2px; align-items: center; }
+#navbar ul:has(> li.navbar-link) > li { margin: 0 !important; }
+#navbar ul:has(> li.navbar-link) > li:not(.navbar-link) { order: -1; margin-right: 12px !important; }
+#navbar li.navbar-link > a { padding: 6px !important; }
+#navbar li.navbar-link > a svg { width: 22px !important; height: 22px !important; }
+@media (min-width: 1024px) {
+  /* Room for the theme switch pinned at the far right. */
+  #navbar ul:has(> li.navbar-link) { margin-right: 64px; }
+}

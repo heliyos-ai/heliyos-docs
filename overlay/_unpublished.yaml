@@ -1,0 +1,13 @@
+# Operations and MCP tools that exist in the code but are not offered in production yet.
+# They are left out of the API reference and the MCP docs. Remove an entry to publish it.
+unpublished:
+  operations:
+    - createBaseSchema
+    - updateBaseSchema
+    - deleteBaseSchema
+    - createRecordEnrichment
+  tools:
+    - heliyos_objects_create
+    - heliyos_objects_update
+    - heliyos_objects_delete
+    - heliyos_records_enrich

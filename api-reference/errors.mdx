@@ -1,0 +1,61 @@
+---
+title: "Errors"
+description: "The error envelope, every error code, and which errors to retry."
+---
+
+Errors answer with an HTTP status and a JSON body with a stable code:
+
+```json
+{
+  "message": "Note not found",
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Note not found"
+  }
+}
+```
+
+- `error.code` is stable. Branch on it, not on the message.
+- `error.message` is for people and may change.
+- `error.details`, when present, carries extra context such as the fields that failed validation.
+
+## Codes
+
+| Status | Code | Meaning | Retry? |
+| --- | --- | --- | --- |
+| `400` | `VALIDATION_FAILED` | The request is malformed: a missing or invalid field, a bad id, an invalid `filters` value. | No. Fix the request. |
+| `401` | `UNAUTHENTICATED` | The API key is missing, malformed, revoked or expired. | No. Check the key. |
+| `403` | `FORBIDDEN_ACTION` | The key is valid, but this action is not allowed: the endpoint does not accept API keys, the plan does not include it, or a limit is reached. | No. |
+| `404` | `NOT_FOUND` | The resource does not exist in this workspace. Ids from other workspaces answer the same way. | No. |
+| `409` | `CONFLICT` | The request conflicts with current state, such as a duplicate unique value, or not enough credits for a run. | After you resolve the conflict. |
+| `429` | `RATE_LIMITED` | Too many requests. | Yes, after `Retry-After` seconds. |
+| `500` | `INTERNAL` | Something failed on our side. | Yes, with backoff. |
+| `502`, `503`, `504` | | A service behind the API was unavailable or slow. | Yes, with backoff. |
+
+<Note>
+  A `404` for a resource that exists in another workspace is deliberate: the API never confirms that an id exists outside your workspace.
+</Note>
+
+## Retrying safely
+
+Retry only `429`, `5xx` and network failures. Use exponential backoff with jitter, and honour `Retry-After` on a `429`.
+
+```javascript
+async function heliyos(path, init = {}, attempt = 0) {
+  const res = await fetch(`https://api-prod.heliyos.ai${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${process.env.HELIYOS_API_KEY}`, "Content-Type": "application/json", ...init.headers },
+  });
+  const retryable = res.status === 429 || res.status >= 500;
+  if (retryable && attempt < 4) {
+    const wait = res.status === 429 ? Number(res.headers.get("Retry-After") ?? 1) * 1000 : 2 ** attempt * 500 + Math.random() * 250;
+    await new Promise((r) => setTimeout(r, wait));
+    return heliyos(path, init, attempt + 1);
+  }
+  const body = res.status === 204 ? null : await res.json();
+  if (!res.ok) throw Object.assign(new Error(body.error?.message ?? res.statusText), { code: body.error?.code, status: res.status });
+  return body;
+}
+```
+
+Creates are not idempotent. Before you retry a `POST` that timed out, check whether the first attempt succeeded, for example by listing recent items.

@@ -1,0 +1,67 @@
+name: Something in the docs is wrong
+description: A page, endpoint or tool is described incorrectly, an example fails, or a link is broken.
+title: "[Docs]: "
+labels: ["docs", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us keep the docs accurate.
+
+        **Never paste an API key, a token or customer data.** Replace them with placeholders such as `heliyos_xxx` or `Northwind Traders`.
+        For a security issue, email soham@heliyos.ai instead of opening an issue.
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: The URL of the page with the problem.
+      placeholder: https://docs.heliyos.ai/api-reference/notes/create-a-note
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Guides
+        - API reference
+        - MCP server
+        - Changelog
+        - Site (navigation, search, layout)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong
+      options:
+        - The docs say something the API or MCP server does not do
+        - A parameter, field or accepted value is missing or wrong
+        - An example or code snippet does not work
+        - A link is broken
+        - It is unclear or hard to follow
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What the docs say
+      description: Quote the sentence, field or example.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What actually happens, or what it should say
+      description: For API behaviour, include the request and the response with keys and personal data removed.
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before you submit
+      options:
+        - label: I removed API keys, tokens and customer data from this issue.
+          required: true

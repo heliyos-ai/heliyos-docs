@@ -1,0 +1,40 @@
+---
+title: "Rate limits"
+description: "How many requests you can make, the headers that tell you where you stand, and how to stay under the limit."
+---
+
+| Who | Limit |
+| --- | --- |
+| Each API key | 60 requests per minute |
+| Requests with a key Heliyos does not recognise | 20 requests per minute per IP address |
+
+The limit is a rolling one-minute window. Every request counts, including ones that fail.
+
+## Headers
+
+Every response carries your current standing:
+
+| Header | Meaning |
+| --- | --- |
+| `X-RateLimit-Limit` | Requests allowed in the window. |
+| `X-RateLimit-Remaining` | Requests left in the current window. |
+| `X-RateLimit-Reset` | When the window resets, as a Unix timestamp in seconds. |
+
+Above the limit the API answers `429` with `error.code` `RATE_LIMITED` and a `Retry-After` header: the number of seconds to wait before you try again.
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 12
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 0
+```
+
+## Staying under the limit
+
+- **Page with the largest `limit`** an endpoint allows, rather than many small pages.
+- **Prefer list calls to many single gets.** A list returns most of what a get does.
+- **Spread background jobs** over time instead of bursting.
+- **Use one key per system.** Each key has its own budget, so a busy sync does not starve another integration.
+- **Back off on `429`.** Wait `Retry-After` seconds, then continue. See [Errors](/api-reference/errors#retrying-safely).
+
+Need a higher limit for a large import or sync? Email [soham@heliyos.ai](mailto:soham@heliyos.ai) with your workspace and the volume you expect.

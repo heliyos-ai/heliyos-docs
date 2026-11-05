@@ -1,0 +1,65 @@
+---
+title: "Upload a file"
+description: "Attach a file to a record or add it to the knowledge base, in three calls."
+---
+
+Files upload straight to storage through a short-lived signed URL, then you register them with Heliyos. The upload itself never carries your API key.
+
+<Steps>
+  <Step title="Get an upload URL">
+    ```bash
+    curl https://api-prod.heliyos.ai/v1/platform/attachments/presigned-urls \
+      -H "Authorization: Bearer $HELIYOS_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "fileName": "pricing-2026.pdf",
+        "mimeType": "application/pdf",
+        "objectType": "company",
+        "fileSize": 482113
+      }'
+    ```
+
+    The answer has `presignedUrl` (valid for one hour) and `fileKey`. The allowed file types and the 25 MB size limit are on [Create an upload URL](/api-reference/files/create-an-upload-url).
+  </Step>
+  <Step title="Upload the bytes">
+    `PUT` the file to `presignedUrl` with the same `Content-Type` and size you declared. Do **not** send your API key on this request.
+
+    ```bash
+    curl -X PUT "$PRESIGNED_URL" \
+      -H "Content-Type: application/pdf" \
+      --data-binary @pricing-2026.pdf
+    ```
+  </Step>
+  <Step title="Register the file">
+    Create the file record with the `fileKey` from step 1, and link it to a record:
+
+    ```bash
+    curl https://api-prod.heliyos.ai/v1/platform/attachments \
+      -H "Authorization: Bearer $HELIYOS_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "fileName": "pricing-2026.pdf",
+        "fileSize": 482113,
+        "mimeType": "application/pdf",
+        "storageKey": "<fileKey>",
+        "storageProvider": "S3",
+        "url": "<presignedUrl without its query string>",
+        "relationships": [
+          {
+            "objectId": "<company id>",
+            "schemaId": "<companies object id>",
+            "objectType": "company"
+          }
+        ]
+      }'
+    ```
+
+    The exact fields, including how to add the file to the knowledge base instead, are on [Create a file](/api-reference/files/create-a-file).
+  </Step>
+</Steps>
+
+To let someone download it later, call [Get a file download link](/api-reference/files/get-a-file-download-link). The link expires after 60 seconds, so fetch it right before you use it.
+
+<Note>
+  The MCP tool `heliyos_files_upload` does all three steps for you.
+</Note>

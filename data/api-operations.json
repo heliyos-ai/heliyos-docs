@@ -1,0 +1,464 @@
+{
+  "getOrganization": {
+    "method": "GET",
+    "path": "/v1/platform/organization",
+    "summary": "Get the workspace",
+    "href": "/api-reference/workspace/get-the-workspace"
+  },
+  "listUsage": {
+    "method": "GET",
+    "path": "/v1/platform/usage",
+    "summary": "List credit usage",
+    "href": "/api-reference/workspace/list-credit-usage"
+  },
+  "listBaseSchemas": {
+    "method": "GET",
+    "path": "/v1/platform/base-schemas",
+    "summary": "List objects",
+    "href": "/api-reference/schemas/list-objects"
+  },
+  "getBaseSchema": {
+    "method": "GET",
+    "path": "/v1/platform/base-schemas/{id}",
+    "summary": "Get an object",
+    "href": "/api-reference/schemas/get-an-object"
+  },
+  "createBaseSchemaField": {
+    "method": "POST",
+    "path": "/v1/platform/base-schemas/{id}/fields",
+    "summary": "Create a field",
+    "href": "/api-reference/schemas/create-a-field"
+  },
+  "updateBaseSchemaField": {
+    "method": "PATCH",
+    "path": "/v1/platform/base-schemas/{id}/fields/{fieldId}",
+    "summary": "Update a field",
+    "href": "/api-reference/schemas/update-a-field"
+  },
+  "deleteBaseSchemaField": {
+    "method": "DELETE",
+    "path": "/v1/platform/base-schemas/{id}/fields/{fieldId}",
+    "summary": "Delete a field",
+    "href": "/api-reference/schemas/delete-a-field"
+  },
+  "listRecords": {
+    "method": "GET",
+    "path": "/v1/platform/base-schemas/{id}/records",
+    "summary": "List records",
+    "href": "/api-reference/records/list-records"
+  },
+  "getRecord": {
+    "method": "GET",
+    "path": "/v1/platform/records/{id}",
+    "summary": "Get a record",
+    "href": "/api-reference/records/get-a-record"
+  },
+  "createRecord": {
+    "method": "POST",
+    "path": "/v1/platform/base-schemas/{id}/records",
+    "summary": "Create a record",
+    "href": "/api-reference/records/create-a-record"
+  },
+  "updateRecord": {
+    "method": "PATCH",
+    "path": "/v1/platform/records/{id}",
+    "summary": "Update a record",
+    "href": "/api-reference/records/update-a-record"
+  },
+  "bulkDeleteRecords": {
+    "method": "POST",
+    "path": "/v1/platform/base-schemas/{id}/records/bulk-delete",
+    "summary": "Delete records",
+    "href": "/api-reference/records/delete-records"
+  },
+  "listRecordLookup": {
+    "method": "GET",
+    "path": "/v1/platform/base-schemas/{id}/records/lookup",
+    "summary": "List record names",
+    "href": "/api-reference/records/list-record-names"
+  },
+  "listRecordTimeline": {
+    "method": "GET",
+    "path": "/v1/platform/records/{id}/timeline",
+    "summary": "List timeline entries",
+    "href": "/api-reference/timeline/list-timeline-entries"
+  },
+  "listRecordEvents": {
+    "method": "GET",
+    "path": "/v1/platform/records/{id}/events",
+    "summary": "List record events",
+    "href": "/api-reference/activities/list-record-events"
+  },
+  "listTaskEvents": {
+    "method": "GET",
+    "path": "/v1/platform/tasks/{id}/events",
+    "summary": "List task events",
+    "href": "/api-reference/activities/list-task-events"
+  },
+  "listInteractions": {
+    "method": "GET",
+    "path": "/v1/platform/interactions",
+    "summary": "List interactions",
+    "href": "/api-reference/interactions/list-interactions"
+  },
+  "getInteraction": {
+    "method": "GET",
+    "path": "/v1/platform/interactions/{id}",
+    "summary": "Get an interaction",
+    "href": "/api-reference/interactions/get-an-interaction"
+  },
+  "listNotes": {
+    "method": "GET",
+    "path": "/v1/platform/notes",
+    "summary": "List notes",
+    "href": "/api-reference/notes/list-notes"
+  },
+  "getNote": {
+    "method": "GET",
+    "path": "/v1/platform/notes/{id}",
+    "summary": "Get a note",
+    "href": "/api-reference/notes/get-a-note"
+  },
+  "createNote": {
+    "method": "POST",
+    "path": "/v1/platform/notes",
+    "summary": "Create a note",
+    "href": "/api-reference/notes/create-a-note"
+  },
+  "updateNote": {
+    "method": "PATCH",
+    "path": "/v1/platform/notes/{id}",
+    "summary": "Update a note",
+    "href": "/api-reference/notes/update-a-note"
+  },
+  "deleteNote": {
+    "method": "DELETE",
+    "path": "/v1/platform/notes/{id}",
+    "summary": "Delete a note",
+    "href": "/api-reference/notes/delete-a-note"
+  },
+  "listTasks": {
+    "method": "GET",
+    "path": "/v1/platform/tasks",
+    "summary": "List tasks",
+    "href": "/api-reference/tasks/list-tasks"
+  },
+  "getTask": {
+    "method": "GET",
+    "path": "/v1/platform/tasks/{id}",
+    "summary": "Get a task",
+    "href": "/api-reference/tasks/get-a-task"
+  },
+  "createTask": {
+    "method": "POST",
+    "path": "/v1/platform/tasks",
+    "summary": "Create a task",
+    "href": "/api-reference/tasks/create-a-task"
+  },
+  "updateTask": {
+    "method": "PATCH",
+    "path": "/v1/platform/tasks/{id}",
+    "summary": "Update a task",
+    "href": "/api-reference/tasks/update-a-task"
+  },
+  "deleteTask": {
+    "method": "DELETE",
+    "path": "/v1/platform/tasks/{id}",
+    "summary": "Delete a task",
+    "href": "/api-reference/tasks/delete-a-task"
+  },
+  "createTaskRun": {
+    "method": "POST",
+    "path": "/v1/platform/tasks/{id}/runs",
+    "summary": "Run workers on a task",
+    "href": "/api-reference/tasks/run-workers-on-a-task"
+  },
+  "listAgents": {
+    "method": "GET",
+    "path": "/v1/platform/agents",
+    "summary": "List workers",
+    "href": "/api-reference/workers-and-runs/list-workers"
+  },
+  "getAgent": {
+    "method": "GET",
+    "path": "/v1/platform/agents/{id}",
+    "summary": "Get a worker",
+    "href": "/api-reference/workers-and-runs/get-a-worker"
+  },
+  "createAgent": {
+    "method": "POST",
+    "path": "/v1/platform/agents",
+    "summary": "Create a worker",
+    "href": "/api-reference/workers-and-runs/create-a-worker"
+  },
+  "updateAgent": {
+    "method": "PATCH",
+    "path": "/v1/platform/agents/{id}",
+    "summary": "Update a worker",
+    "href": "/api-reference/workers-and-runs/update-a-worker"
+  },
+  "deleteAgent": {
+    "method": "DELETE",
+    "path": "/v1/platform/agents/{id}",
+    "summary": "Delete a worker",
+    "href": "/api-reference/workers-and-runs/delete-a-worker"
+  },
+  "createOrchestratorChat": {
+    "method": "POST",
+    "path": "/v1/platform/orchestrator/chats",
+    "summary": "Ask Heliyos",
+    "href": "/api-reference/workers-and-runs/ask-heliyos"
+  },
+  "listWorkerRuns": {
+    "method": "GET",
+    "path": "/v1/platform/workers/runs",
+    "summary": "List runs",
+    "href": "/api-reference/workers-and-runs/list-runs"
+  },
+  "getWorkerRun": {
+    "method": "GET",
+    "path": "/v1/platform/workers/runs/{id}",
+    "summary": "Get a run",
+    "href": "/api-reference/workers-and-runs/get-a-run"
+  },
+  "listWorkerTriggers": {
+    "method": "GET",
+    "path": "/v1/platform/workers/triggers",
+    "summary": "List triggers",
+    "href": "/api-reference/workers-and-runs/list-triggers"
+  },
+  "listWorkerTools": {
+    "method": "GET",
+    "path": "/v1/platform/workers/tools",
+    "summary": "List actions",
+    "href": "/api-reference/workers-and-runs/list-actions"
+  },
+  "listReviews": {
+    "method": "GET",
+    "path": "/v1/platform/reviews",
+    "summary": "List reviews",
+    "href": "/api-reference/reviews/list-reviews"
+  },
+  "getReview": {
+    "method": "GET",
+    "path": "/v1/platform/reviews/{id}",
+    "summary": "Get a review",
+    "href": "/api-reference/reviews/get-a-review"
+  },
+  "createReviewDecision": {
+    "method": "POST",
+    "path": "/v1/platform/reviews/{id}/decisions",
+    "summary": "Approve or reject a review",
+    "href": "/api-reference/reviews/approve-or-reject-a-review"
+  },
+  "listGlobalScouts": {
+    "method": "GET",
+    "path": "/v1/platform/global-scouts",
+    "summary": "List workspace Scouts",
+    "href": "/api-reference/scouts/list-workspace-scouts"
+  },
+  "getGlobalScout": {
+    "method": "GET",
+    "path": "/v1/platform/global-scouts/{id}",
+    "summary": "Get a workspace Scout",
+    "href": "/api-reference/scouts/get-a-workspace-scout"
+  },
+  "createGlobalScout": {
+    "method": "POST",
+    "path": "/v1/platform/global-scouts",
+    "summary": "Create a custom Scout",
+    "href": "/api-reference/scouts/create-a-custom-scout"
+  },
+  "updateGlobalScout": {
+    "method": "PATCH",
+    "path": "/v1/platform/global-scouts/{id}",
+    "summary": "Update a custom Scout",
+    "href": "/api-reference/scouts/update-a-custom-scout"
+  },
+  "setGlobalScoutState": {
+    "method": "POST",
+    "path": "/v1/platform/global-scouts/{id}/state",
+    "summary": "Set a workspace Scout state",
+    "href": "/api-reference/scouts/set-a-workspace-scout-state"
+  },
+  "deleteGlobalScout": {
+    "method": "DELETE",
+    "path": "/v1/platform/global-scouts/{id}",
+    "summary": "Delete a custom Scout",
+    "href": "/api-reference/scouts/delete-a-custom-scout"
+  },
+  "listCompanyScouts": {
+    "method": "GET",
+    "path": "/v1/platform/companies/{id}/scouts",
+    "summary": "List company Scouts",
+    "href": "/api-reference/scouts/list-company-scouts"
+  },
+  "createCompanyScouts": {
+    "method": "POST",
+    "path": "/v1/platform/companies/{id}/scouts",
+    "summary": "Add Scouts to a company",
+    "href": "/api-reference/scouts/add-scouts-to-a-company"
+  },
+  "deleteCompanyScouts": {
+    "method": "DELETE",
+    "path": "/v1/platform/companies/{id}/scouts",
+    "summary": "Remove company Scouts",
+    "href": "/api-reference/scouts/remove-company-scouts"
+  },
+  "listSignals": {
+    "method": "GET",
+    "path": "/v1/platform/signals",
+    "summary": "List signals",
+    "href": "/api-reference/signals/list-signals"
+  },
+  "listGlobalScoutSignals": {
+    "method": "GET",
+    "path": "/v1/platform/global-scouts/{id}/signals",
+    "summary": "List workspace Scout signals",
+    "href": "/api-reference/signals/list-workspace-scout-signals"
+  },
+  "markSignalRead": {
+    "method": "POST",
+    "path": "/v1/platform/signals/{id}/read",
+    "summary": "Mark a signal read",
+    "href": "/api-reference/signals/mark-a-signal-read"
+  },
+  "bulkMarkSignalsRead": {
+    "method": "POST",
+    "path": "/v1/platform/signals/bulk-read",
+    "summary": "Mark signals read in bulk",
+    "href": "/api-reference/signals/mark-signals-read-in-bulk"
+  },
+  "getWatchlistStatistics": {
+    "method": "GET",
+    "path": "/v1/platform/watchlist/statistics",
+    "summary": "Get watchlist statistics",
+    "href": "/api-reference/watchlist/get-watchlist-statistics"
+  },
+  "watchCompany": {
+    "method": "POST",
+    "path": "/v1/platform/companies/{id}/watch",
+    "summary": "Watch a company",
+    "href": "/api-reference/watchlist/watch-a-company"
+  },
+  "unwatchCompany": {
+    "method": "DELETE",
+    "path": "/v1/platform/companies/{id}/watch",
+    "summary": "Unwatch a company",
+    "href": "/api-reference/watchlist/unwatch-a-company"
+  },
+  "getCurrentOrganization": {
+    "method": "GET",
+    "path": "/v1/auth/organizations/current",
+    "summary": "Get the knowledge base",
+    "href": "/api-reference/knowledge-base/get-the-knowledge-base"
+  },
+  "updateCurrentOrganization": {
+    "method": "PATCH",
+    "path": "/v1/auth/organizations/current",
+    "summary": "Update the knowledge base",
+    "href": "/api-reference/knowledge-base/update-the-knowledge-base"
+  },
+  "createPresignedUrl": {
+    "method": "POST",
+    "path": "/v1/platform/attachments/presigned-urls",
+    "summary": "Create an upload URL",
+    "href": "/api-reference/files/create-an-upload-url"
+  },
+  "createAttachment": {
+    "method": "POST",
+    "path": "/v1/platform/attachments",
+    "summary": "Create a file",
+    "href": "/api-reference/files/create-a-file"
+  },
+  "listAttachments": {
+    "method": "GET",
+    "path": "/v1/platform/attachments",
+    "summary": "List files",
+    "href": "/api-reference/files/list-files"
+  },
+  "getAttachment": {
+    "method": "GET",
+    "path": "/v1/platform/attachments/{id}",
+    "summary": "Get a file",
+    "href": "/api-reference/files/get-a-file"
+  },
+  "getAttachmentDownloadUrl": {
+    "method": "GET",
+    "path": "/v1/platform/attachments/{id}/download",
+    "summary": "Get a file download link",
+    "href": "/api-reference/files/get-a-file-download-link"
+  },
+  "deleteAttachment": {
+    "method": "DELETE",
+    "path": "/v1/platform/attachments/{id}",
+    "summary": "Delete a file",
+    "href": "/api-reference/files/delete-a-file"
+  },
+  "listClassificationLabels": {
+    "method": "GET",
+    "path": "/v1/platform/classification-labels",
+    "summary": "List label groups",
+    "href": "/api-reference/labels/list-label-groups"
+  },
+  "createClassificationLabels": {
+    "method": "POST",
+    "path": "/v1/platform/classification-labels",
+    "summary": "Create a label group",
+    "href": "/api-reference/labels/create-a-label-group"
+  },
+  "updateClassificationLabels": {
+    "method": "PATCH",
+    "path": "/v1/platform/classification-labels/{id}",
+    "summary": "Update a label group",
+    "href": "/api-reference/labels/update-a-label-group"
+  },
+  "deleteClassificationLabels": {
+    "method": "DELETE",
+    "path": "/v1/platform/classification-labels/{id}",
+    "summary": "Delete a label group",
+    "href": "/api-reference/labels/delete-a-label-group"
+  },
+  "listTeamMemberships": {
+    "method": "GET",
+    "path": "/v1/auth/team-memberships",
+    "summary": "List team members",
+    "href": "/api-reference/team/list-team-members"
+  },
+  "createTeamMembership": {
+    "method": "POST",
+    "path": "/v1/auth/team-memberships",
+    "summary": "Invite a team member",
+    "href": "/api-reference/team/invite-a-team-member"
+  },
+  "deleteTeamMembership": {
+    "method": "DELETE",
+    "path": "/v1/auth/team-memberships/{id}",
+    "summary": "Remove a team member",
+    "href": "/api-reference/team/remove-a-team-member"
+  },
+  "updateTeamMembershipRole": {
+    "method": "PATCH",
+    "path": "/v1/auth/team-memberships/{id}/role",
+    "summary": "Change a team member role",
+    "href": "/api-reference/team/change-a-team-member-role"
+  },
+  "listRoles": {
+    "method": "GET",
+    "path": "/v1/auth/roles",
+    "summary": "List roles",
+    "href": "/api-reference/team/list-roles"
+  },
+  "getNotificationSettings": {
+    "method": "GET",
+    "path": "/v1/platform/notification-settings",
+    "summary": "Get notification settings",
+    "href": "/api-reference/notification-settings/get-notification-settings"
+  },
+  "updateNotificationSettings": {
+    "method": "PATCH",
+    "path": "/v1/platform/notification-settings",
+    "summary": "Update notification settings",
+    "href": "/api-reference/notification-settings/update-notification-settings"
+  }
+}

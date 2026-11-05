@@ -1,0 +1,285 @@
+tag:
+  name: Labels
+  icon: /icons/app-labels.svg
+  order: 120
+  description: >-
+    Label groups that sort your email threads, for example Intent or Pricing questions. Heliyos
+    files each classified thread under a group, and each group holds the more specific labels it
+    brings together. The API calls them classification labels.
+
+components:
+  LabelValue:
+    type: object
+    description: One label inside a group.
+    properties:
+      _id:
+        type: string
+        description: >-
+          The label's id: a 24-character hexadecimal id, or `temp_` followed by digits on labels made
+          by older versions of Heliyos.
+        example: 6729d1e2f3a4b5c6d7e8f901
+      name:
+        type: string
+        description: The label's name, 1 to 100 characters, unique within its group (case-insensitive).
+        example: Discount request
+
+  LabelGroup:
+    type: object
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the group belongs to.
+      name:
+        type: string
+        description: The group's name, unique in the workspace.
+      description:
+        type: string
+        description: What the group covers. Heliyos reads it when it classifies email threads.
+      isActive:
+        type: boolean
+        description: "`true` for an active group, `false` for a paused one."
+      color:
+        type: string
+        description: >-
+          The colour family the group's chip renders in, chosen by Heliyos: one of `red`, `orange`,
+          `amber`, `olive`, `green`, `teal`, `blue`, `purple`, `pink`, `gray`. Groups created before
+          these families existed can hold an older colour name. Absent on some older groups.
+        example: teal
+      labels:
+        type: array
+        description: The labels in the group.
+        items: { $ref: "#/components/schemas/LabelValue" }
+      createdBy:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: Id of the user (or the API key's owner) who created the group.
+      createdAt: { $ref: "#/components/schemas/Timestamp" }
+      updatedAt: { $ref: "#/components/schemas/Timestamp" }
+
+operations:
+  listClassificationLabels:
+    summary: List label groups
+    description: |
+      Returns the workspace's label groups with their labels, newest first.
+
+      By default the list pages with a cursor: pass `limit`, then send `meta.pagination.next_cursor`
+      back as `cursor` for the next page. Sending `page` switches to page-number paging, sorted by
+      creation date (newest first), with `meta.pagination` holding `page`, `limit`, `totalPages`,
+      `count` and `hasMore`. See [Pagination](/api-reference/pagination).
+    parameters:
+      limit:
+        description: Groups per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. When sent, `page` is ignored.
+      page:
+        description: A page number, starting at 1, for page-number paging. Pages are `limit` groups long.
+      search:
+        description: >-
+          Text to match, case-insensitive and literally, in the group's name, its description or any
+          of its labels' names. Up to 200 characters.
+        example: pricing
+      isActive:
+        description: "`true` lists only active groups, `false` only paused ones. Omit for both."
+        example: true
+    response:
+      description: A page of label groups.
+      message: Classification labels retrieved successfully
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/LabelGroup" }
+      example:
+        - _id: 6729d0a1b2c3d4e5f6a7b8c9
+          organizationId: 66a0f1e2d3c4b5a697887766
+          name: Pricing questions
+          description: Emails asking about prices, discounts, quotes or billing terms.
+          isActive: true
+          color: teal
+          labels:
+            - _id: 6729d1e2f3a4b5c6d7e8f901
+              name: Discount request
+            - _id: 6729d1e2f3a4b5c6d7e8f902
+              name: Quote request
+          createdBy: 66a0f1e2d3c4b5a697881111
+          createdAt: "2026-11-04T09:30:00.000Z"
+          updatedAt: "2026-11-04T09:30:00.000Z"
+
+  createClassificationLabels:
+    summary: Create a label group
+    description: |
+      Creates a label group, optionally with its labels. Heliyos picks the group's colour: a family
+      no other group in the workspace holds yet (no other active group, when the new group is
+      active), at random among the least used.
+
+      Give each label its own new id: any 24-character hexadecimal string you generate.
+    requestBody:
+      schema:
+        type: object
+        required: [name, description]
+        properties:
+          name:
+            type: string
+            description: >-
+              The group's name, 1 to 200 characters. Must not equal the name of another group in the
+              workspace (exact, case-sensitive match).
+            example: Pricing questions
+          description:
+            type: string
+            description: >-
+              What the group covers, 1 to 1,000 characters. Heliyos reads it when it classifies email
+              threads, so say plainly what belongs in the group.
+            example: Emails asking about prices, discounts, quotes or billing terms.
+          isActive:
+            type: boolean
+            description: "`true` (the default) for an active group, `false` to create it paused."
+            example: true
+          labels:
+            type: array
+            description: >-
+              The group's labels, up to 500. Names must be unique within the group, ignoring case.
+              Defaults to none.
+            items:
+              type: object
+              required: [_id, name]
+              properties:
+                _id:
+                  type: string
+                  description: A new id you generate for the label, 24 hexadecimal characters.
+                  example: 6729d1e2f3a4b5c6d7e8f901
+                name:
+                  type: string
+                  description: The label's name, 1 to 100 characters.
+                  example: Discount request
+      example:
+        name: Pricing questions
+        description: Emails asking about prices, discounts, quotes or billing terms.
+        labels:
+          - _id: 6729d1e2f3a4b5c6d7e8f901
+            name: Discount request
+          - _id: 6729d1e2f3a4b5c6d7e8f902
+            name: Quote request
+    response:
+      status: 201
+      description: The created label group.
+      message: Classification labels created successfully
+      data: { $ref: "#/components/schemas/LabelGroup" }
+      example:
+        _id: 6729d0a1b2c3d4e5f6a7b8c9
+        organizationId: 66a0f1e2d3c4b5a697887766
+        name: Pricing questions
+        description: Emails asking about prices, discounts, quotes or billing terms.
+        isActive: true
+        color: teal
+        labels:
+          - _id: 6729d1e2f3a4b5c6d7e8f901
+            name: Discount request
+          - _id: 6729d1e2f3a4b5c6d7e8f902
+            name: Quote request
+        createdBy: 66a0f1e2d3c4b5a697881111
+        createdAt: "2026-11-04T09:30:00.000Z"
+        updatedAt: "2026-11-04T09:30:00.000Z"
+    errors:
+      "400": "VALIDATION_FAILED: a field is missing or invalid, or two labels share a name (ignoring case)."
+      "409": "CONFLICT: another group in the workspace already has this name. Nothing is written."
+
+  updateClassificationLabels:
+    summary: Update a label group
+    description: |
+      Changes a group's name, description, active state or labels. Send at least one field.
+
+      `labels`, when sent, replaces the group's labels completely. To keep a label, send it with its
+      current `_id`. A label sent with a new id is a new label, even if its name matches one being
+      removed.
+
+      Reactivating a paused group (`isActive` from `false` to `true`) can change its `color`, so
+      that it stays distinct from the other active groups.
+    parameters:
+      id:
+        description: The label group's id.
+        example: 6729d0a1b2c3d4e5f6a7b8c9
+    requestBody:
+      schema:
+        type: object
+        minProperties: 1
+        properties:
+          name:
+            type: string
+            description: A new name, 1 to 200 characters, not used by another group in the workspace (case-sensitive).
+            example: Pricing and billing
+          description:
+            type: string
+            description: A new description, 1 to 1,000 characters.
+          isActive:
+            type: boolean
+            description: "`false` pauses the group without deleting it. `true` reactivates it."
+          labels:
+            type: array
+            description: >-
+              The complete new set of labels, up to 500, with names unique within the group (ignoring
+              case). Replaces the current labels.
+            items:
+              type: object
+              required: [_id, name]
+              properties:
+                _id:
+                  type: string
+                  description: >-
+                    The label's current id to keep it, or a new 24-character hexadecimal id for a new
+                    label. Ids starting with `temp_` are accepted only to keep existing labels that have one.
+                  example: 6729d1e2f3a4b5c6d7e8f901
+                name:
+                  type: string
+                  description: The label's name, 1 to 100 characters.
+                  example: Discount request
+      example:
+        name: Pricing and billing
+        labels:
+          - _id: 6729d1e2f3a4b5c6d7e8f901
+            name: Discount request
+          - _id: 6729d1e2f3a4b5c6d7e8f903
+            name: Invoice question
+    response:
+      description: The updated label group.
+      message: Classification labels updated successfully
+      data: { $ref: "#/components/schemas/LabelGroup" }
+      example:
+        _id: 6729d0a1b2c3d4e5f6a7b8c9
+        organizationId: 66a0f1e2d3c4b5a697887766
+        name: Pricing and billing
+        description: Emails asking about prices, discounts, quotes or billing terms.
+        isActive: true
+        color: teal
+        labels:
+          - _id: 6729d1e2f3a4b5c6d7e8f901
+            name: Discount request
+          - _id: 6729d1e2f3a4b5c6d7e8f903
+            name: Invoice question
+        createdBy: 66a0f1e2d3c4b5a697881111
+        createdAt: "2026-11-04T09:30:00.000Z"
+        updatedAt: "2026-11-05T14:10:00.000Z"
+    errors:
+      "400": "VALIDATION_FAILED: no field sent, a field is invalid, or two labels share a name (ignoring case)."
+      "404": "NOT_FOUND: no label group with this id in the workspace."
+      "409": "CONFLICT: another group in the workspace already has this name. Nothing is written."
+
+  deleteClassificationLabels:
+    summary: Delete a label group
+    description: |
+      Deletes a label group and its labels permanently. Email threads filed under the group no
+      longer show it. To stop using a group but keep it, set `isActive` to `false` with
+      **Update a label group** instead.
+    content: |
+      <Warning>
+        This cannot be undone. Email threads filed under the group stop showing it.
+      </Warning>
+    parameters:
+      id:
+        description: The label group's id.
+        example: 6729d0a1b2c3d4e5f6a7b8c9
+    response:
+      description: The label group was deleted. `data` is an empty object.
+      message: Classification labels deleted successfully
+      empty: true
+    errors:
+      "404": "NOT_FOUND: no label group with this id in the workspace."

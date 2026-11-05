@@ -1,0 +1,213 @@
+tag:
+  name: Watchlist
+  icon: /icons/app-watchlist.svg
+  order: 100
+  description: >-
+    The watchlist is the set of companies your workers monitor. Each watched company uses one Watcher
+    from your plan: the workers keep it enriched, pull in its emails and meetings, and run Scouts on it.
+
+components:
+  WatchlistStatistics:
+    type: object
+    description: Activity across every watched company.
+    properties:
+      tasks:
+        type: object
+        description: Tasks linked to a watched company.
+        properties:
+          total: { type: integer, description: Every linked task. }
+          completed: { type: integer, description: Linked tasks with status `completed`. }
+      totalActions:
+        type: integer
+        description: Completed background worker runs (Autonomous Updates) linked to a watched company.
+      totalMeetings:
+        type: integer
+        description: Meetings linked to a watched company.
+      totalDeals:
+        type: integer
+        description: Deal records linked to a watched company, across every deal object in the workspace.
+      accountStatus:
+        type: object
+        additionalProperties: { type: integer }
+        description: >-
+          Watched companies per value of their `account_status` field, keyed by the stored option value.
+          Companies without a value count under `unknown`. Empty when nothing is watched.
+      engagementStatus:
+        type: object
+        additionalProperties: { type: integer }
+        description: >-
+          Watched companies per value of their `engagement_status` field, keyed by the stored option value.
+          Companies without a value count under `unknown`. Empty when nothing is watched.
+
+  WatchedCompanyRecord:
+    type: object
+    additionalProperties: true
+    description: The company record after the change.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace.
+      baseSchemaId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The record's object (base schema), your companies object.
+      objectType:
+        type: string
+        description: Always `company`.
+      data:
+        type: object
+        additionalProperties: true
+        description: >-
+          The record's field values, keyed by field name (for example `company_name`, `website`,
+          `account_status`, `engagement_status`).
+      isAgentAssigned:
+        type: boolean
+        description: Whether the company is watched. `true` after watching, `false` after unwatching.
+      agentAssignmentStatus:
+        type: string
+        nullable: true
+        enum: [STARTED, FINISHED, FAILED, null]
+        description: >-
+          How taking the account on is going: `STARTED` when watched, `FINISHED` once the workers have
+          enriched it and pulled in its history, `FAILED` if that did not complete. Null after unwatching.
+      enrichmentStatus:
+        type: string
+        description: "`NOT_ENRICHED`, `STARTED`, `FINISHED` or `FAILED`. May be absent."
+      enrichmentDate:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        nullable: true
+        description: When enrichment last started.
+      relationships:
+        type: array
+        description: The records linked to the company.
+        items:
+          type: object
+          additionalProperties: true
+          properties:
+            objectId: { $ref: "#/components/schemas/ObjectId" }
+            schemaId: { $ref: "#/components/schemas/ObjectId" }
+            objectType: { type: string, description: "`people`, `deals` or a custom object type." }
+      metadata:
+        type: object
+        description: Who created and last changed the record, and when.
+        properties:
+          created:
+            type: object
+            properties:
+              at: { $ref: "#/components/schemas/Timestamp" }
+              by: { type: string, description: Id of the user who created it. }
+          updated:
+            type: object
+            properties:
+              at: { $ref: "#/components/schemas/Timestamp" }
+              by: { type: string, description: Id of the user who last changed it. }
+
+operations:
+  getWatchlistStatistics:
+    summary: Get watchlist statistics
+    description: |
+      Returns counts of the work done on watched companies: linked tasks (and how many are completed),
+      Autonomous Updates runs, meetings and deals, plus how many watched companies have each account
+      status and engagement status. When no company is watched, every count is 0 and both status maps are empty.
+
+      To list the watched companies themselves, list your companies object's records filtered on
+      `isAgentAssigned`. Watchers in use and your plan's Watchers limit are on `GET /v1/platform/organization`
+      (`watchersInUse`, `watchersLimit`).
+    response:
+      description: The watchlist's statistics.
+      message: Watchlist statistics retrieved successfully
+      data: { $ref: "#/components/schemas/WatchlistStatistics" }
+      example:
+        tasks: { total: 48, completed: 31 }
+        totalActions: 126
+        totalMeetings: 19
+        totalDeals: 7
+        accountStatus: { customer: 5, prospect: 9, unknown: 2 }
+        engagementStatus: { active: 8, cooling: 3, unknown: 5 }
+    errors:
+      "404": "NOT_FOUND: the workspace has no companies object."
+
+  watchCompany:
+    summary: Watch a company
+    description: |
+      Adds a company record to the watchlist. Watching an already watched company changes nothing and uses
+      no Watcher.
+
+      When the company was not watched yet:
+      - It uses one Watcher from your plan. With none left, the call answers 403 and nothing changes.
+      - Its `account_status` and `engagement_status` are set to `unknown` if empty, and the records linked
+        to it (for example its people and deals) are marked watched too.
+      - In the background, the workers enrich it and pull in its emails and meetings (enrichment uses
+        credits), and every active Scout scoped to the watchlist starts on it. Custom Scouts cost credits per run.
+
+      Background steps that fail do not fail the call. Check progress in `agentAssignmentStatus` and with
+      `GET /v1/platform/companies/{id}/scouts`.
+    parameters:
+      id:
+        description: The company record's id.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+    response:
+      description: The company record, now watched.
+      message: Company watched.
+      data: { $ref: "#/components/schemas/WatchedCompanyRecord" }
+      example:
+        _id: 66f1a8c3e4b0a1b2c3d4e5f6
+        organizationId: 66a0f1e2d3c4b5a697887766
+        baseSchemaId: 66a0f1e2d3c4b5a697880001
+        objectType: company
+        data:
+          company_name: Northwind Traders
+          website: https://northwind.example.com
+          account_status: unknown
+          engagement_status: unknown
+        isAgentAssigned: true
+        agentAssignmentStatus: STARTED
+        enrichmentStatus: FINISHED
+        relationships:
+          - objectId: 66f1a8c3e4b0a1b2c3d4e600
+            schemaId: 66a0f1e2d3c4b5a697880002
+            objectType: people
+        metadata:
+          created: { at: "2026-09-12T10:00:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "403": "FORBIDDEN: no Watchers left on your plan (or no active plan): `Watched accounts limit reached. Upgrade your plan to watch more companies.` Also returned when you cannot edit the companies object."
+      "404": "NOT_FOUND: no record with this id in the workspace, or the record is not a company."
+
+  unwatchCompany:
+    summary: Unwatch a company
+    description: |
+      Removes a company from the watchlist and frees its Watcher. Its company Scouts are stopped and deleted,
+      together with the signals they found, and the workers stop monitoring it. Its emails, meetings, tasks
+      and notes stay, so watching it again picks the history back up.
+
+      Records that were marked watched along with the company (its people and deals) stay marked.
+      Unwatching a company that is not watched frees no Watcher, but still removes any Scouts left on it.
+    content: |
+      <Warning>The company's Scouts and their signals are deleted. Watching the company again starts new Scouts.</Warning>
+    parameters:
+      id:
+        description: The company record's id.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+    response:
+      description: The company record, no longer watched.
+      message: Company unwatched.
+      data: { $ref: "#/components/schemas/WatchedCompanyRecord" }
+      example:
+        _id: 66f1a8c3e4b0a1b2c3d4e5f6
+        organizationId: 66a0f1e2d3c4b5a697887766
+        baseSchemaId: 66a0f1e2d3c4b5a697880001
+        objectType: company
+        data:
+          company_name: Northwind Traders
+          website: https://northwind.example.com
+          account_status: customer
+          engagement_status: active
+        isAgentAssigned: false
+        agentAssignmentStatus: null
+        metadata:
+          created: { at: "2026-09-12T10:00:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-05T14:10:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "403": "FORBIDDEN: you cannot edit the companies object."
+      "404": "NOT_FOUND: no record with this id in the workspace, or the record is not a company."

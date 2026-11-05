@@ -1,0 +1,207 @@
+tag:
+  name: Notes
+  icon: /icons/app-notes.svg
+  order: 50
+  description: >-
+    Free-text notes, optionally linked to records, tasks and interactions. Notes show up on the
+    timeline of every record they are linked to, and workers read them as customer memory.
+
+components:
+  Note:
+    type: object
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the note belongs to.
+      title:
+        type: string
+        description: The note's title. Can be an empty string.
+      content:
+        type: string
+        description: The note's body, as plain text or simple HTML.
+      relationships:
+        type: array
+        description: The records, tasks and interactions the note is linked to.
+        items: { $ref: "#/components/schemas/Relationship" }
+      metadata: { $ref: "#/components/schemas/AuditMetadata" }
+
+operations:
+  listNotes:
+    summary: List notes
+    description: |
+      Returns the workspace's notes, newest first.
+
+      By default the list pages with a cursor: pass `limit`, then send `meta.pagination.next_cursor`
+      back as `cursor` for the next page. To filter, search or sort, send a JSON `filters` object.
+      A custom sort or `page` switches to page-number paging. See [Pagination](/api-reference/pagination)
+      and [Filtering and sorting](/api-reference/filtering).
+
+      To list only the notes linked to one record, send `{"relatedObjectId": "<record id>"}` in `filters`.
+    parameters:
+      limit:
+        description: Notes per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. Only valid with the default order (newest first) and no `page`.
+      page:
+        description: A page number, starting at 1, for page-number paging. Pages are `limit` notes long.
+      filters:
+        description: |
+          A JSON object, URL-encoded. Keys:
+          - `search` (string): matches text in the title or body, case-insensitive.
+          - `relatedObjectId` (id): only notes linked to this record, task or interaction.
+          - `filters` (array): conditions `{ "field", "operator", "value" }`. Fields: `title`, `content`,
+            `metadata.created.at`, `metadata.created.by`. Operators: `equals`, `not_equals`, `contains`,
+            `after`, `before`, `gt`, `gte`, `lt`, `lte`, `in`, `empty`, `not_empty`.
+          - `sort` (array): `{ "field", "direction" }` with direction `asc` or `desc`, for example
+            `[{"field": "metadata.updated.at", "direction": "desc"}]`.
+        example: '{"search":"pricing","relatedObjectId":"66f1a8c3e4b0a1b2c3d4e5f6"}'
+    response:
+      description: A page of notes.
+      message: Notes fetched successfully.
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/Note" }
+      example:
+        - _id: 6720b1f4c2a9e3d1f0a4b5c6
+          organizationId: 66a0f1e2d3c4b5a697887766
+          title: Pricing call follow-up
+          content: Champion confirmed budget for Q1. Procurement wants a security review first.
+          relationships:
+            - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+              schemaId: 66a0f1e2d3c4b5a697880001
+              objectType: company
+          metadata:
+            created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+            updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+
+  getNote:
+    summary: Get a note
+    description: |
+      Returns one note with its full body. Each entry in `relationships` is hydrated with a summary of
+      the linked resource in `data` and, for records, the record's object in `schema`.
+    parameters:
+      id:
+        description: The note's id.
+        example: 6720b1f4c2a9e3d1f0a4b5c6
+    response:
+      description: The note.
+      message: Note fetched successfully.
+      data: { $ref: "#/components/schemas/Note" }
+      example:
+        _id: 6720b1f4c2a9e3d1f0a4b5c6
+        organizationId: 66a0f1e2d3c4b5a697887766
+        title: Pricing call follow-up
+        content: Champion confirmed budget for Q1. Procurement wants a security review first.
+        relationships:
+          - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+            data: { company_name: Northwind Traders, logo: "https://logo.example/northwind.example" }
+            schema: { _id: 66a0f1e2d3c4b5a697880001, name: Companies, objectType: company }
+        metadata:
+          created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "404": "NOT_FOUND: no note with this id in the workspace."
+
+  createNote:
+    summary: Create a note
+    description: |
+      Creates a note and, optionally, links it to records, tasks or interactions. The note appears on the
+      timeline of every linked record.
+    requestBody:
+      schema:
+        type: object
+        required: [title]
+        properties:
+          title:
+            type: string
+            description: The note's title. Required, but may be an empty string.
+            example: Pricing call follow-up
+          content:
+            type: string
+            description: The body, as plain text or simple HTML. May be empty.
+            example: Champion confirmed budget for Q1.
+          relationships:
+            type: array
+            description: Records, tasks or interactions to link the note to. Each must belong to this workspace.
+            items: { $ref: "#/components/schemas/RelationshipInput" }
+      example:
+        title: Pricing call follow-up
+        content: Champion confirmed budget for Q1. Procurement wants a security review first.
+        relationships:
+          - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+    response:
+      status: 201
+      description: The created note.
+      message: Note created successfully.
+      data: { $ref: "#/components/schemas/Note" }
+      example:
+        _id: 6720b1f4c2a9e3d1f0a4b5c6
+        organizationId: 66a0f1e2d3c4b5a697887766
+        title: Pricing call follow-up
+        content: Champion confirmed budget for Q1. Procurement wants a security review first.
+        relationships:
+          - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+        metadata:
+          created: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+
+  updateNote:
+    summary: Update a note
+    description: |
+      Changes a note's title, body or links. Send at least one field. `relationships`, when sent,
+      replaces the note's links completely: include the existing ones you want to keep.
+    parameters:
+      id:
+        description: The note's id.
+        example: 6720b1f4c2a9e3d1f0a4b5c6
+    requestBody:
+      schema:
+        type: object
+        minProperties: 1
+        properties:
+          title:
+            type: string
+            description: A new title. May be an empty string.
+          content:
+            type: string
+            description: A new body. May be an empty string.
+          relationships:
+            type: array
+            description: The complete new set of links. Replaces the current links.
+            items: { $ref: "#/components/schemas/RelationshipInput" }
+      example:
+        content: Champion confirmed budget for Q1. Security review booked for Nov 12.
+    response:
+      description: The updated note.
+      message: Note updated successfully.
+      data: { $ref: "#/components/schemas/Note" }
+      example:
+        _id: 6720b1f4c2a9e3d1f0a4b5c6
+        title: Pricing call follow-up
+        content: Champion confirmed budget for Q1. Security review booked for Nov 12.
+    errors:
+      "404": "NOT_FOUND: no note with this id, or a relationships entry names a resource outside the workspace. Nothing is written."
+
+  deleteNote:
+    summary: Delete a note
+    description: Deletes a note permanently. Its links are removed with it; the linked records are not changed.
+    parameters:
+      id:
+        description: The note's id.
+        example: 6720b1f4c2a9e3d1f0a4b5c6
+    response:
+      status: 204
+      description: The note was deleted. The response has no body.
+      noContent: true
+      specMismatch: The API answers with this status; the published spec still says 200.
+    errors:
+      "404": "NOT_FOUND: no note with this id in the workspace."

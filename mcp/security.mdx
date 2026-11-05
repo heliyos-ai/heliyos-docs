@@ -1,0 +1,23 @@
+---
+title: "Security"
+description: "Where your key goes, what the server sends, and how to keep access tight."
+---
+
+- **Your key stays on your machine.** The server reads it from its environment and sends it only to the Heliyos API (`HELIYOS_BASE_URL`), as a bearer token over HTTPS. It refuses a base URL that is not HTTPS.
+- **File uploads skip the key.** File content goes to a short-lived signed storage URL, and that request does not carry your key.
+- **No telemetry.** The server sends nothing anywhere else and keeps no logs. Diagnostics go to your client's stderr, and error messages have keys removed.
+- **Credentials never reach the model.** Every tool result is scrubbed of tokens, grant ids, API keys and key hashes before your client sees it.
+- **Rate limits.** The API allows 60 requests per minute per key and per IP address. On a `429`, the server waits for `Retry-After` and retries once.
+- **Destructive tools are marked.** Deletes and removals are annotated as destructive, and the Claude Code skill tells agents to confirm them first.
+
+## Keep access tight
+
+- Use **one key per person and machine**, so you can revoke one without breaking the others.
+- Give keys an **expiry**.
+- **Revoke** keys you no longer use in **Settings → API keys**.
+- Keep review on in Heliyos for actions you have not yet handed to workers.
+- **`heliyos_reviews_decide` approves or rejects reviews.** Approving carries out the worker's action (the email is sent, the deal changes, the meeting is booked) and cannot be undone. Clients that support it ask before a destructive tool runs; keep that confirmation on, and give the key only to agents you trust with that decision.
+
+## Report a vulnerability
+
+Report security issues privately through [GitHub security advisories](https://github.com/heliyos-ai/heliyos-mcp/security/advisories/new), not in a public issue.

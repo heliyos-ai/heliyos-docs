@@ -1,0 +1,74 @@
+---
+title: "Pagination"
+description: "Cursor paging for stable lists, page numbers for sorted and grouped views."
+---
+
+List endpoints return one page at a time. Most support two modes.
+
+## Cursor paging (default)
+
+Send `limit` (1 to 100, default 20). The response lists the newest items first. When there is another page, `meta.pagination.next_cursor` is set. Send it back as `cursor`, with the same `limit`, to get the next page. On the last page `next_cursor` is absent.
+
+```bash
+curl "https://api-prod.heliyos.ai/v1/platform/notes?limit=50" \
+  -H "Authorization: Bearer $HELIYOS_API_KEY"
+```
+
+```json
+{
+  "meta": {
+    "message": "Notes fetched successfully.",
+    "pagination": {
+      "limit": 50,
+      "next_cursor": "NjcyMGIxZjRjMmE5ZTNkMWYwYTRiNWM2"
+    }
+  },
+  "data": [
+    { ... },
+    { ... }
+  ]
+}
+```
+
+```bash
+curl "https://api-prod.heliyos.ai/v1/platform/notes?limit=50&cursor=NjcyMGIxZjRjMmE5ZTNkMWYwYTRiNWM2" \
+  -H "Authorization: Bearer $HELIYOS_API_KEY"
+```
+
+Cursor pages stay correct while items are added between calls: a new item never pushes another one onto a page you already read. Treat the cursor as opaque.
+
+## Page-number paging
+
+Sending `page`, a custom `sort`, or a grouping in `filters` switches the list to page numbers. `meta.pagination` then describes the page instead of carrying a cursor. Its keys depend on the endpoint, for example:
+
+```json
+{
+  "page": 2,
+  "limit": 20,
+  "totalPages": 7,
+  "count": 131,
+  "hasMore": true
+}
+```
+
+Each list endpoint's page shows its exact keys. A `cursor` sent together with a custom sort, `page` or grouping is rejected with `400 VALIDATION_FAILED`.
+
+## Reading a whole list
+
+```python
+import os, requests
+
+def all_notes():
+    url = "https://api-prod.heliyos.ai/v1/platform/notes"
+    headers = {"Authorization": f"Bearer {os.environ['HELIYOS_API_KEY']}"}
+    params = {"limit": 100}
+    while True:
+        body = requests.get(url, headers=headers, params=params, timeout=30).json()
+        yield from body["data"]
+        cursor = body["meta"].get("pagination", {}).get("next_cursor")
+        if not cursor:
+            return
+        params["cursor"] = cursor
+```
+
+Large reads count against your [rate limit](/api-reference/rate-limits). Use the largest `limit` the endpoint allows.

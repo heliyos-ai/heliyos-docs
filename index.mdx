@@ -1,0 +1,118 @@
+---
+title: "Heliyos API and MCP server"
+sidebarTitle: "Introduction"
+description: "Heliyos is the AI operating system for revenue. Use its REST API and MCP server to read and update customer memory, run AI workers and decide reviews."
+keywords: ["Heliyos", "Heliyos API", "Heliyos MCP server", "AI operating system for revenue", "AI workers", "customer memory", "AI CRM API", "MCP server for sales", "revenue automation API"]
+mode: "wide"
+---
+
+<div className="hy-hero">
+  <p className="hy-eyebrow">DEVELOPER DOCS</p>
+  <h1 className="hy-display">One customer memory, <em>open to your stack.</em></h1>
+  <p className="hy-lede">
+    Heliyos is the AI operating system for revenue: one self-updating unified memory of every customer relationship and how you sell, with AI workers that act the moment something changes, from a new account worth pursuing to a deal going quiet, and see the work through. The REST API and the MCP server let your systems and your AI agents read and change it, while your team approves what goes out.
+  </p>
+</div>
+
+## What Heliyos is
+
+Heliyos is built for B2B revenue teams: founders, revenue leaders and GTM operators. It is both the system of record and the system of action. It watches your conversations, accounts and the market for moments that matter and turns them into tasks. AI workers complete those tasks alongside your team, over hours or days, using the tools their job allows. Every result is written back to the record. Use Heliyos as your CRM, or keep HubSpot in sync both ways.
+
+## What Heliyos does
+
+Each capability below says what it does in the Heliyos app and what you can reach from the API and the MCP server.
+
+- **Unified customer memory.** One self-updating memory per account: a summary, its people, its deals and a timeline of emails, meetings, notes and signals. Heliyos builds it from email, calendar, calls, LinkedIn, forms and files, so nobody has to type it in. Every worker reads it before a task and writes the result back. *API:* [records](/api-reference/records/list-records), [timeline](/api-reference/timeline/list-timeline-entries), [activities](/api-reference/activities/list-record-events), [interactions](/api-reference/interactions/list-interactions) and [notes](/api-reference/notes/list-notes).
+- **AI workers.** Taylor, the AI account executive, handles follow-ups, proposals and scheduling. Parker, the AI platform admin, updates company, people and deal records after every email and meeting. Custom workers take any role you describe in plain words, with their own triggers and actions. *API:* [create and manage workers](/api-reference/workers-and-runs/list-workers), [triggers](/api-reference/workers-and-runs/list-triggers), [actions](/api-reference/workers-and-runs/list-actions) and [runs](/api-reference/workers-and-runs/list-runs).
+- **Reviews.** Every important worker action, such as an outbound email, a deal stage change or sharing a file, waits for a person with its evidence and reasoning. Your workspace's autopilot settings decide what may skip review. *API:* [list reviews](/api-reference/reviews/list-reviews) and [approve or reject one](/api-reference/reviews/approve-or-reject-a-review).
+- **Ask Heliyos.** Ask about any account and get the answer from its memory. Ask for work and Heliyos plans it and hands it to the right workers. *API:* [Ask Heliyos](/api-reference/workers-and-runs/ask-heliyos), then [follow the run](/api-reference/workers-and-runs/get-a-run).
+- **Tasks.** Tasks come from emails, meetings and signals, and go to people or workers. Workers can carry a task to done. *API:* [tasks](/api-reference/tasks/list-tasks), [run workers on a task](/api-reference/tasks/run-workers-on-a-task) and [task history](/api-reference/activities/list-task-events).
+- **Watchlist.** Add key accounts and workers monitor them: they keep each company enriched, pull in its emails and meetings, and run Scouts on it. *API:* [watch a company](/api-reference/watchlist/watch-a-company) and [watchlist statistics](/api-reference/watchlist/get-watchlist-statistics).
+- **Scouts and signals.** Scouts watch companies and the web for buying signals such as funding rounds, product launches, leadership changes and press coverage. Each finding is a signal with a summary and its sources. *API:* [Scouts](/api-reference/scouts/list-workspace-scouts) and [signals](/api-reference/signals/list-signals).
+- **Knowledge.** What your workers know about your business: the business context, products, pain points, value proposition, qualification criteria, custom entries and files. *API:* [knowledge base](/api-reference/knowledge-base/get-the-knowledge-base) and [files](/api-reference/files/list-files).
+- **Inbox and meetings.** One inbox for Gmail, Outlook and LinkedIn, linked to every company and person. Meetings are recorded and transcribed, and their decisions and actions become record updates and tasks. *API:* read synced email threads and meetings with [interactions](/api-reference/interactions/list-interactions).
+- **Objects and fields.** Companies, people, deals and your own custom objects, with the fields your team needs. *API:* [objects and fields](/api-reference/schemas/list-objects).
+- **AI research columns and enrichment.** Heliyos researches each record for a question you ask, with sources, and fills missing company and contact details. These run in the Heliyos app today and are not in the API.
+- **Integrations.** Gmail, Outlook, Google Calendar, Microsoft Calendar, LinkedIn, Zoom, Google Meet, Microsoft Teams, HubSpot (two-way sync), Typeform, Google Drive and OneDrive. You connect them in the Heliyos app.
+
+## Choose how you connect
+
+<CardGroup cols={2}>
+  <Card title="REST API" icon="/icons/api.svg" href="/quickstart">
+    Call Heliyos from your backend, scripts and integrations over HTTPS with a workspace API key.
+  </Card>
+  <Card title="MCP server" icon="/icons/plug.svg" href="/mcp/overview">
+    Give Claude, Cursor, Codex, VS Code and other MCP clients 73 tools for your workspace.
+  </Card>
+</CardGroup>
+
+## What you can build
+
+<CardGroup cols={3}>
+  <Card title="Keep records in sync" icon="/icons/refresh.svg" href="/guides/sync-companies">
+    Create and update companies, people, deals and custom objects from your own systems.
+  </Card>
+  <Card title="Feed customer memory" icon="/icons/note.svg" href="/api-reference/notes/create-a-note">
+    Write notes, upload files and update the knowledge base that workers read when they act.
+  </Card>
+  <Card title="Hand work to workers" icon="/icons/worker.svg" href="/guides/run-workers-on-a-task">
+    Create tasks, run workers on them and follow each run through review.
+  </Card>
+  <Card title="Watch accounts" icon="/icons/scouts.svg" href="/api-reference/scouts/list-workspace-scouts">
+    Set up Scouts and Watchers, then read the signals they find.
+  </Card>
+  <Card title="Read the timeline" icon="/icons/timeline.svg" href="/concepts/timeline">
+    Pull a record's history, emails and meetings into your own tools.
+  </Card>
+  <Card title="Shape the workspace" icon="/icons/objects.svg" href="/concepts/workspace-and-objects">
+    Add fields so Heliyos matches how your team sells.
+  </Card>
+</CardGroup>
+
+## How it fits together
+
+```text
+Your code ──HTTPS + API key──► api-prod.heliyos.ai ──► your workspace
+                                    ▲               (records, notes, tasks,
+AI agent ──MCP (stdio)──► @heliyos/mcp               Scouts, workers, review)
+```
+
+- **One workspace per key.** A key reads and writes only the workspace it was created in.
+- **One contract.** The MCP server calls the same endpoints this reference documents, so anything a tool does, your code can do too.
+- **The team stays in control.** Work that needs approval waits in review, whichever way it was started.
+
+## Frequently asked questions
+
+<AccordionGroup>
+  <Accordion title="What is Heliyos?">
+    Heliyos is the AI operating system for revenue. It keeps one self-updating memory of every customer relationship and how you sell, and runs AI workers that act when something changes and see the work through. Your team approves what goes out.
+  </Accordion>
+  <Accordion title="Does Heliyos have an API?">
+    Yes. The Heliyos REST API is at `https://api-prod.heliyos.ai`. It takes and returns JSON, authenticates with a workspace API key, and covers records, objects and fields, timeline, activities, interactions, notes, tasks, workers and runs, reviews, Scouts, signals, the watchlist, the knowledge base, files, labels, team and notification settings. Start with the [Quickstart](/quickstart).
+  </Accordion>
+  <Accordion title="Does Heliyos have an MCP server?">
+    Yes. `@heliyos/mcp` is an open-source Model Context Protocol server with 73 tools. It runs on your machine with `npx -y @heliyos/mcp` and works with Claude Code, Codex, Cursor, VS Code, Claude Desktop, Antigravity and any other MCP client. See [Install](/mcp/install).
+  </Accordion>
+  <Accordion title="How do I get an API key?">
+    A workspace admin creates one in **Settings → API keys** in Heliyos. The key is shown once, acts as an admin of that one workspace, and stops working when it is revoked or expires. See [Authentication](/authentication).
+  </Accordion>
+  <Accordion title="Can AI workers send emails or change deals without approval?">
+    Not unless you allow it. Important actions wait in Reviews with the worker's evidence and reasoning until a person approves them, unless your workspace's autopilot settings let that kind of action through. With the API you can list reviews and approve or reject them. See [Workers and review](/concepts/workers-and-review).
+  </Accordion>
+  <Accordion title="Is Heliyos a CRM?">
+    Heliyos can be your CRM: it holds companies, people, deals and custom objects and keeps them current from your emails and meetings. If you use HubSpot, Heliyos keeps it in sync both ways.
+  </Accordion>
+  <Accordion title="What are the API's rate limits?">
+    60 requests per minute per API key. Every response says how many requests are left, and a `429` response says when to retry. See [Rate limits](/api-reference/rate-limits).
+  </Accordion>
+  <Accordion title="How is Heliyos priced?">
+    Heliyos is priced by usage, with no seats. Runs of custom workers and some features use credits, which you can read with [List credit usage](/api-reference/workspace/list-credit-usage). Heliyos is in closed beta. [Join the waitlist](https://www.heliyos.ai).
+  </Accordion>
+  <Accordion title="Where do I get help?">
+    Email [soham@heliyos.ai](mailto:soham@heliyos.ai), or open an issue on [GitHub](https://github.com/heliyos-ai/heliyos-mcp/issues) for the MCP server.
+  </Accordion>
+</AccordionGroup>
+
+<Card title="Make your first request" icon="/icons/arrow.svg" href="/quickstart" horizontal>
+  Create a key and list your companies in under five minutes.
+</Card>

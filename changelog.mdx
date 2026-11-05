@@ -1,0 +1,15 @@
+---
+title: "Changelog"
+description: "New endpoints, MCP tools and changes to the Heliyos API and MCP server."
+rss: true
+---
+
+<Update label="November 2026" description="API v1.0.0 · MCP v1.0.0" tags={["API", "MCP"]}>
+  ## Heliyos API v1.0.0 and MCP server v1.0.0
+
+  - The Heliyos REST API is documented: 77 endpoints across the workspace, objects and fields, records, timeline, activities, interactions, notes, tasks, workers and runs, reviews, Scouts, signals, the watchlist, the knowledge base, files, labels, team and notification settings.
+  - Every response uses one `{ meta, data }` envelope, and every error carries a stable `error.code`.
+  - Lists page with a cursor by default. See [Pagination](/api-reference/pagination).
+  - Workspace API keys are stored hashed, can expire, and stop working when their creator loses admin access.
+  - `@heliyos/mcp` v1.0.0: 73 tools. See [Install](/mcp/install).
+</Update>

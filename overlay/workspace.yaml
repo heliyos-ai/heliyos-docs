@@ -1,0 +1,228 @@
+tag:
+  name: Workspace
+  icon: /icons/app-general.svg
+  order: 10
+  description: >-
+    The workspace your API key belongs to, and the log of credits it has used. Every other call in
+    this API is scoped to this workspace.
+
+components:
+  Workspace:
+    type: object
+    properties:
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace's id. Every record, task and worker in this API belongs to it.
+      name:
+        type: string
+        description: The workspace's name.
+      billingStatus:
+        type: string
+        nullable: true
+        enum: [active, trialing, past_due, canceled, incomplete, incomplete_expired, pending_payment]
+        description: |
+          The subscription's billing state:
+          - `active`: paid and current.
+          - `trialing`: in a free trial.
+          - `past_due`: a payment failed and is being retried.
+          - `canceled`: the subscription ended.
+          - `incomplete`: the first payment has not gone through yet.
+          - `incomplete_expired`: the first payment never went through and the attempt expired.
+          - `pending_payment`: waiting for a payment to complete.
+
+          `null` when the workspace has no billing state recorded.
+      plan:
+        type: object
+        nullable: true
+        description: The active plan. `null` when the workspace has no active plan.
+        properties:
+          name:
+            type: string
+            description: The plan's name. Can be an empty string when the plan's product has no name.
+      memberCount:
+        type: integer
+        minimum: 0
+        description: How many distinct people have a role in the workspace.
+      recordCounts:
+        type: object
+        description: How many records the workspace holds in the built-in objects.
+        properties:
+          companies:
+            type: integer
+            minimum: 0
+            description: Company records.
+          people:
+            type: integer
+            minimum: 0
+            description: People records.
+          deals:
+            type: integer
+            minimum: 0
+            description: Deal records, across every deal pipeline.
+      watchersInUse:
+        type: integer
+        minimum: 0
+        description: How many companies are on the watchlist right now.
+      watchersLimit:
+        type: integer
+        nullable: true
+        minimum: 0
+        description: >-
+          The most companies the active plan lets you watch. `null` when the workspace has no active
+          plan.
+
+  UsageEntry:
+    type: object
+    description: One credit charge. Entries are written by Heliyos when a feature spends credits; you cannot create or change them.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace that was charged.
+      feature:
+        type: string
+        description: |
+          What spent the credits. Values written today:
+          - `worker_run`: a custom worker called during a run (default workers are free).
+          - `company_enrichment`: a company was enriched.
+          - `people_enrichment`: people were enriched for a lead set.
+          - `leadset_enrichment`: lead set columns were enriched.
+          - `leadset_match`: a lead set search and match.
+          - `ai_column`: AI column research on records.
+          - `scout`: a Scout run.
+          - `meeting_analysis`: a meeting recording was analysed.
+          - `agent_operation`: a generic charge with no more specific feature.
+
+          Older entries can carry other names. Treat the field as an open set.
+        example: worker_run
+      creditsUtilized:
+        type: number
+        minimum: 0
+        exclusiveMinimum: true
+        description: Credits spent by this entry. Always greater than 0.
+        example: 5
+      objectId:
+        type: string
+        description: >-
+          Id of what the credits were spent on, when there is one: a record id, or a run id for
+          `worker_run`. Free text, not always a 24-character id.
+      objectType:
+        type: string
+        description: The kind of thing `objectId` names, for example `orchestrator_run` for a worker run. Often absent.
+      sourceService:
+        type: string
+        enum: [platform, agent, other]
+        description: Which part of Heliyos recorded the charge.
+      description:
+        type: string
+        description: A short human-readable note about the charge.
+      metadata:
+        type: object
+        additionalProperties: true
+        description: >-
+          Extra detail about the charge. For `worker_run`, `workerId` and `tool` name the worker
+          that was called.
+      meta:
+        type: object
+        additionalProperties: true
+        description: An index copy of `organizationId`, `feature` and `sourceService`. Carries nothing the entry does not already have.
+      createdAt: { $ref: "#/components/schemas/Timestamp" }
+
+operations:
+  getOrganization:
+    summary: Get the workspace
+    description: |
+      Returns the workspace your API key belongs to: its id and name, billing status, active plan,
+      member count, how many companies, people and deals it holds, and how many companies are watched
+      out of the plan's limit.
+
+      Counts are computed on every call, so they are always current.
+    response:
+      description: The workspace summary.
+      message: Organization fetched.
+      data: { $ref: "#/components/schemas/Workspace" }
+      example:
+        id: 66a0f1e2d3c4b5a697887766
+        name: Northwind Traders
+        billingStatus: active
+        plan: { name: Growth }
+        memberCount: 8
+        recordCounts: { companies: 1240, people: 3815, deals: 96 }
+        watchersInUse: 42
+        watchersLimit: 100
+    errors:
+      "404": "NOT_FOUND: the workspace no longer exists."
+
+  listUsage:
+    summary: List credit usage
+    description: |
+      Returns the workspace's credit charges, newest first. Each entry says when credits were spent,
+      by which feature, how many, and on what. Use it to reconcile your balance or to see what a
+      worker run cost.
+
+      This list pages by page number: send `page` and `limit`. `meta.pagination` carries `page`,
+      `limit`, `offset` (rows skipped), `count` (all matching entries) and `hasMore`. There is no
+      cursor. To total a period, page through every entry for it and add up `creditsUtilized`.
+
+      Filters combine with AND. The API is read-only for usage: there is no way to add, change or
+      refund credits through it.
+    parameters:
+      limit:
+        description: Entries per page, 1 to 100. Defaults to 20.
+        example: 50
+      page:
+        description: The page to return, starting at 1. Defaults to 1.
+        example: 1
+      from:
+        description: >-
+          Only entries recorded at or after this time, as an ISO 8601 date or date-time. A date alone
+          means midnight UTC at the start of that day.
+        example: "2026-10-01T00:00:00Z"
+      to:
+        description: >-
+          Only entries recorded at or before this time, as an ISO 8601 date or date-time. A date alone
+          means midnight UTC at the start of that day, so to include a whole day send the next day's
+          midnight or `T23:59:59.999Z`.
+        example: "2026-10-31T23:59:59.999Z"
+      feature:
+        description: >-
+          Only entries for this feature, exact match and case-sensitive, for example `worker_run` or
+          `company_enrichment`. See `feature` on the entry for the values.
+        example: worker_run
+      objectId:
+        description: Only entries charged on this object, exact match. For a worker run, pass the run id.
+        example: 9f2c4e7a1b3d4f6a8c0e2b4d6f8a0c1e
+      search:
+        description: >-
+          Case-insensitive text matched against `feature`, `objectId`, `objectType` and
+          `description`. Up to 200 characters. An empty string is ignored.
+        example: enrichment
+    response:
+      description: A page of usage entries.
+      message: Usage logs fetched successfully
+      pagination: offset
+      paginationExample: { page: 1, limit: 20, offset: 0, count: 2, hasMore: false }
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/UsageEntry" }
+      example:
+        - _id: 6721c0a4b5d6e7f8a9b0c1d2
+          organizationId: 66a0f1e2d3c4b5a697887766
+          feature: worker_run
+          creditsUtilized: 5
+          objectId: 9f2c4e7a1b3d4f6a8c0e2b4d6f8a0c1e
+          objectType: orchestrator_run
+          sourceService: agent
+          description: worker account_researcher in run 9f2c4e7a1b3d4f6a8c0e2b4d6f8a0c1e
+          metadata: { workerId: 6720f3a1b2c3d4e5f6a7b8c9, tool: account_researcher }
+          meta: { organizationId: 66a0f1e2d3c4b5a697887766, feature: worker_run, sourceService: agent }
+          createdAt: "2026-11-04T10:12:40.000Z"
+        - _id: 6721bf02a3b4c5d6e7f8a9b0
+          organizationId: 66a0f1e2d3c4b5a697887766
+          feature: company_enrichment
+          creditsUtilized: 2
+          sourceService: agent
+          description: Company enrichment
+          metadata: {}
+          meta: { organizationId: 66a0f1e2d3c4b5a697887766, feature: company_enrichment, sourceService: agent }
+          createdAt: "2026-11-04T09:58:11.000Z"

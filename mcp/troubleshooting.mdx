@@ -1,0 +1,16 @@
+---
+title: "Troubleshooting"
+description: "Fixes for the errors you are most likely to see."
+---
+
+| What you see | What to do |
+| --- | --- |
+| `heliyos-mcp: Set HELIYOS_API_KEY to a Heliyos API key` | The client did not pass the key. Check the `env` block, or that the variable is exported in the shell that started the client. |
+| `HELIYOS_API_KEY does not look like a Heliyos API key` | The value is not a Heliyos key. Keys start with `heliyos_`. Copy it again or create a new one. |
+| `UNAUTHENTICATED` | The key was revoked, has expired or was mistyped. Create a new key in **Settings → API keys**. |
+| `FORBIDDEN_ACTION` | The workspace plan or billing status does not allow the action, or the action is not available to API keys. |
+| `RATE_LIMITED` | You are above 60 requests per minute. Wait a minute, and prefer list calls over many single gets. |
+| `heliyos_ask` times out | Raise the client's tool timeout (see [Configuration](/mcp/configuration#tool-timeout)). The run keeps going; follow it with `heliyos_runs_get`. |
+| The server does not start or shows no tools | Check `node -v` is 20 or later. The first start downloads the package, which can exceed a 10 second startup timeout; raise it (Codex `startup_timeout_sec`, Claude Code `MCP_TIMEOUT`). Apps opened from the dock may not find `npx`; use its full path from `which npx`. |
+
+Still stuck? Open an issue at [github.com/heliyos-ai/heliyos-mcp/issues](https://github.com/heliyos-ai/heliyos-mcp/issues) or email [soham@heliyos.ai](mailto:soham@heliyos.ai). Never paste your key.

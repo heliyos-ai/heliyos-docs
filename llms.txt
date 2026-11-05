@@ -1,0 +1,233 @@
+# Heliyos developer docs
+
+> Developer docs for Heliyos, the AI operating system for revenue. The Heliyos REST API and the Heliyos MCP server (`@heliyos/mcp`) let your systems and AI agents read and change a workspace's customer memory, records, notes, tasks, Scouts, knowledge base and files, start AI workers, and list and decide the reviews waiting on your team.
+
+## About Heliyos
+
+Heliyos is the AI operating system for revenue: one self-updating unified memory of every customer relationship and how you sell, with AI workers that act the moment something changes, from a new account worth pursuing to a deal going quiet, and see the work through.
+
+- Category: AI operating system for revenue, for B2B revenue teams (founders, revenue leaders, GTM operators). Heliyos is both the system of record and the system of action. Use it as your CRM, or keep HubSpot in sync both ways.
+- Memory: one self-updating memory per account (summary, people, deals and a unified timeline of emails, meetings, notes and signals), built from email, calendar, calls, LinkedIn, forms and files, plus the knowledge base. Every worker reads it before a task and writes the result back.
+- AI workers: Taylor (AI account executive: follow-ups, proposals, scheduling) and Parker (AI platform admin: updates company, people and deal records after every email and meeting). Custom workers take any role described in plain words.
+- Control: every important worker action (an outbound email, a deal stage change, sharing a file) waits in Reviews with its evidence and reasoning until a person approves it, unless the workspace's autopilot settings allow it.
+- Product surfaces: Watchlist, Reviews, Inbox (Gmail, Outlook, LinkedIn), Tasks, Meetings (recording and transcription), Ask Heliyos (chat), Knowledge, Scouts (signal monitoring), AI research columns and enrichment.
+- Pricing: usage-based, no seats. Status: closed beta with a waitlist at https://www.heliyos.ai.
+- Canonical spelling: Heliyos (not Helios). Website: https://www.heliyos.ai. Docs: https://docs.heliyos.ai. Contact: soham@heliyos.ai.
+
+## API and MCP facts
+
+- Versions: Heliyos REST API v1.0.0 (every path starts with `/v1/`) and `@heliyos/mcp` v1.0.0.
+- REST API base URL: `https://api-prod.heliyos.ai`. JSON over HTTPS.
+- Authentication: `Authorization: Bearer <key>` with a workspace API key (starts with `heliyos_`), created by a workspace admin in Settings → API keys. A key acts as an admin of one workspace and sees only that workspace.
+- Responses: `{ "meta": { "message" }, "data": ... }`. Errors: `{ "message", "error": { "code", "message", "details" } }` with codes `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN_ACTION`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `INTERNAL`.
+- Lists page with a cursor (`limit` 1 to 100, default 20, then `cursor` = `meta.pagination.next_cursor`). Rate limit: 60 requests per minute per key.
+- MCP server: `npx -y @heliyos/mcp` with `HELIYOS_API_KEY` set. It runs locally over stdio and works with Claude Code, Codex, Cursor, VS Code, Claude Desktop, Antigravity and any MCP client. Every tool calls an endpoint documented here.
+
+## How to read these docs
+
+- Every page has a Markdown version: add `.md` to its URL. The links below already point to it.
+- Each endpoint page's Markdown version includes the endpoint's full OpenAPI definition: parameters, request body, response schema and examples.
+- Start with Quickstart for a first request, Authentication for keys, and the MCP server overview for agents.
+
+## Get started
+
+- [Heliyos API and MCP server](https://docs.heliyos.ai/index.md): Heliyos is the AI operating system for revenue. Use its REST API and MCP server to read and update customer memory, run AI workers and decide reviews.
+- [Quickstart](https://docs.heliyos.ai/quickstart.md): Create an API key, find your companies object and make your first three calls.
+- [Authentication](https://docs.heliyos.ai/authentication.md): Create, use, rotate and revoke workspace API keys.
+
+## Core concepts
+
+- [Workspace and objects](https://docs.heliyos.ai/concepts/workspace-and-objects.md): How a Heliyos workspace is organised: objects, their fields, and the records inside them.
+- [Records and fields](https://docs.heliyos.ai/concepts/records-and-fields.md): Read and write field values, link records to each other, and avoid the common pitfalls.
+- [Timeline and activity](https://docs.heliyos.ai/concepts/timeline.md): Three views of what happened on a record: events, interactions and the AI-written timeline.
+- [Workers and review](https://docs.heliyos.ai/concepts/workers-and-review.md): How workers take on work through the API, and how review keeps your team in control.
+
+## Using the API
+
+- [Pagination](https://docs.heliyos.ai/api-reference/pagination.md): Cursor paging for stable lists, page numbers for sorted and grouped views.
+- [Filtering and sorting](https://docs.heliyos.ai/api-reference/filtering.md): The filters JSON object that list endpoints accept: search, conditions and sort.
+- [Errors](https://docs.heliyos.ai/api-reference/errors.md): The error envelope, every error code, and which errors to retry.
+- [Rate limits](https://docs.heliyos.ai/api-reference/rate-limits.md): How many requests you can make, the headers that tell you where you stand, and how to stay under the limit.
+
+## Recipes
+
+- [Sync companies from your system](https://docs.heliyos.ai/guides/sync-companies.md): Create or update companies from another system without making duplicates.
+- [Upload a file](https://docs.heliyos.ai/guides/upload-a-file.md): Attach a file to a record or add it to the knowledge base, in three calls.
+- [Run workers on a task](https://docs.heliyos.ai/guides/run-workers-on-a-task.md): Create a task, hand it to Heliyos workers, and follow the run through review.
+
+## API reference: Overview
+
+- [API reference](https://docs.heliyos.ai/api-reference/introduction.md): Conventions shared by every endpoint: base URL, authentication, the response envelope, ids, paging and errors.
+
+## API reference: Workspace
+
+- [Get the workspace](https://docs.heliyos.ai/api-reference/workspace/get-the-workspace.md): `GET /v1/platform/organization`. Returns the workspace your API key belongs to: its id and name, billing status, active plan, member count, how many companies, people and deals it holds, and how many companies are watched out of the plan's limit.
+- [List credit usage](https://docs.heliyos.ai/api-reference/workspace/list-credit-usage.md): `GET /v1/platform/usage`. Returns the workspace's credit charges, newest first.
+
+## API reference: Schemas
+
+- [List objects](https://docs.heliyos.ai/api-reference/schemas/list-objects.md): `GET /v1/platform/base-schemas`. Returns every object (base schema) in the workspace that you may view, with its fields, oldest first: companies, people, each deal pipeline and your custom objects.
+- [Get an object](https://docs.heliyos.ai/api-reference/schemas/get-an-object.md): `GET /v1/platform/base-schemas/{id}`. Returns one object (base schema) with its fields.
+- [Create a field](https://docs.heliyos.ai/api-reference/schemas/create-a-field.md): `POST /v1/platform/base-schemas/{id}/fields`. Adds a field to an object (base schema).
+- [Update a field](https://docs.heliyos.ai/api-reference/schemas/update-a-field.md): `PATCH /v1/platform/base-schemas/{id}/fields/{fieldId}`. Changes one field of an object (base schema).
+- [Delete a field](https://docs.heliyos.ai/api-reference/schemas/delete-a-field.md): `DELETE /v1/platform/base-schemas/{id}/fields/{fieldId}`. Deletes one field of an object (base schema) and removes its value from every record, permanently.
+
+## API reference: Records
+
+- [List records](https://docs.heliyos.ai/api-reference/records/list-records.md): `GET /v1/platform/base-schemas/{id}/records`. Returns the records of one object (base schema), such as your companies, people, deals or a custom object.
+- [Get a record](https://docs.heliyos.ai/api-reference/records/get-a-record.md): `GET /v1/platform/records/{id}`. Returns one record by id, from any object.
+- [Create a record](https://docs.heliyos.ai/api-reference/records/create-a-record.md): `POST /v1/platform/base-schemas/{id}/records`. Creates a record in an object.
+- [Update a record](https://docs.heliyos.ai/api-reference/records/update-a-record.md): `PATCH /v1/platform/records/{id}`. Changes some of a record's field values.
+- [Delete records](https://docs.heliyos.ai/api-reference/records/delete-records.md): `POST /v1/platform/base-schemas/{id}/records/bulk-delete`. Permanently deletes up to 1000 records of one object in a single call.
+- [List record names](https://docs.heliyos.ai/api-reference/records/list-record-names.md): `GET /v1/platform/base-schemas/{id}/records/lookup`. Returns a compact index of an object's records, for searching by name on your side: each record's id, display name, one supporting value, image and watched state.
+
+## API reference: Timeline
+
+- [List timeline entries](https://docs.heliyos.ai/api-reference/timeline/list-timeline-entries.md): `GET /v1/platform/records/{id}/timeline`. Returns the AI-written timeline of a company, person or deal, newest first, together with the record's current relationship summary.
+
+## API reference: Activities
+
+- [List record events](https://docs.heliyos.ai/api-reference/activities/list-record-events.md): `GET /v1/platform/records/{id}/events`. Serves records only (companies, people, deals and custom objects).
+- [List task events](https://docs.heliyos.ai/api-reference/activities/list-task-events.md): `GET /v1/platform/tasks/{id}/events`. Serves tasks only.
+
+## API reference: Interactions
+
+- [List interactions](https://docs.heliyos.ai/api-reference/interactions/list-interactions.md): `GET /v1/platform/interactions`. Returns the workspace's synced email threads and meetings, from every connected mailbox and calendar, with their AI analysis and the records they are linked to.
+- [Get an interaction](https://docs.heliyos.ai/api-reference/interactions/get-an-interaction.md): `GET /v1/platform/interactions/{id}`. Returns one email thread or meeting with every stored field: all messages and bodies for an email, the transcript and analysis for a meeting, its labels, and the records it is linked to.
+
+## API reference: Notes
+
+- [List notes](https://docs.heliyos.ai/api-reference/notes/list-notes.md): `GET /v1/platform/notes`. Returns the workspace's notes, newest first.
+- [Get a note](https://docs.heliyos.ai/api-reference/notes/get-a-note.md): `GET /v1/platform/notes/{id}`. Returns one note with its full body.
+- [Create a note](https://docs.heliyos.ai/api-reference/notes/create-a-note.md): `POST /v1/platform/notes`. Creates a note and, optionally, links it to records, tasks or interactions.
+- [Update a note](https://docs.heliyos.ai/api-reference/notes/update-a-note.md): `PATCH /v1/platform/notes/{id}`. Changes a note's title, body or links.
+- [Delete a note](https://docs.heliyos.ai/api-reference/notes/delete-a-note.md): `DELETE /v1/platform/notes/{id}`. Deletes a note permanently.
+
+## API reference: Tasks
+
+- [List tasks](https://docs.heliyos.ai/api-reference/tasks/list-tasks.md): `GET /v1/platform/tasks`. Returns the workspace's tasks, newest first.
+- [Get a task](https://docs.heliyos.ai/api-reference/tasks/get-a-task.md): `GET /v1/platform/tasks/{id}`. Returns one task with its full description, its linked records (each with the record's field values in `data` and its object in `schema`), its plan and the state of the workers' current run.
+- [Create a task](https://docs.heliyos.ai/api-reference/tasks/create-a-task.md): `POST /v1/platform/tasks`. Creates a task and, optionally, links it to records and assigns people and workers.
+- [Update a task](https://docs.heliyos.ai/api-reference/tasks/update-a-task.md): `PATCH /v1/platform/tasks/{id}`. Changes the fields you send and keeps the rest.
+- [Delete a task](https://docs.heliyos.ai/api-reference/tasks/delete-a-task.md): `DELETE /v1/platform/tasks/{id}`. Deletes a task permanently.
+- [Run workers on a task](https://docs.heliyos.ai/api-reference/tasks/run-workers-on-a-task.md): `POST /v1/platform/tasks/{id}/runs`. Starts Heliyos workers on a task now, the same as pressing Play on the task.
+
+## API reference: Workers and runs
+
+- [List workers](https://docs.heliyos.ai/api-reference/workers-and-runs/list-workers.md): `GET /v1/platform/agents`. Returns every worker in the workspace, default and custom, in one response: custom workers first, then default ones, each group by name.
+- [Get a worker](https://docs.heliyos.ai/api-reference/workers-and-runs/get-a-worker.md): `GET /v1/platform/agents/{id}`. Returns one worker with its full instructions, tools, files and triggers.
+- [Create a worker](https://docs.heliyos.ai/api-reference/workers-and-runs/create-a-worker.md): `POST /v1/platform/agents`. Creates a custom worker.
+- [Update a worker](https://docs.heliyos.ai/api-reference/workers-and-runs/update-a-worker.md): `PATCH /v1/platform/agents/{id}`. Changes a worker.
+- [Delete a worker](https://docs.heliyos.ai/api-reference/workers-and-runs/delete-a-worker.md): `DELETE /v1/platform/agents/{id}`. Deletes a custom worker permanently and removes its schedules.
+- [Ask Heliyos](https://docs.heliyos.ai/api-reference/workers-and-runs/ask-heliyos.md): `POST /v1/platform/orchestrator/chats`. Sends a message to Heliyos, the same as typing it into Ask Heliyos in the app.
+- [List runs](https://docs.heliyos.ai/api-reference/workers-and-runs/list-runs.md): `GET /v1/platform/workers/runs`. Returns the workspace's runs, newest first: Ask Heliyos conversations, worker chats, task runs, and runs started by events and schedules.
+- [Get a run](https://docs.heliyos.ai/api-reference/workers-and-runs/get-a-run.md): `GET /v1/platform/workers/runs/{id}`. Returns one run: its status, what set it off, every step with a one-line summary, the reviews it raised, its credit and model usage, and its final reply once it has one.
+- [List triggers](https://docs.heliyos.ai/api-reference/workers-and-runs/list-triggers.md): `GET /v1/platform/workers/triggers`. Returns the catalogue of triggers a worker can be set to run on: the events it can subscribe to, mentions and schedules.
+- [List actions](https://docs.heliyos.ai/api-reference/workers-and-runs/list-actions.md): `GET /v1/platform/workers/tools`. Returns every action a worker in this workspace can take.
+
+## API reference: Reviews
+
+- [List reviews](https://docs.heliyos.ai/api-reference/reviews/list-reviews.md): `GET /v1/platform/reviews`. Returns the workspace's reviews: worker actions waiting for a person, and the ones already decided.
+- [Get a review](https://docs.heliyos.ai/api-reference/reviews/get-a-review.md): `GET /v1/platform/reviews/{id}`. Returns one review with everything a person needs to decide it: the worker's proposal (`proposal`, and the type's own fields such as `draftEmail` or `previousVersion` and `newVersion`), its `reasoning`, `confidence` and `approvalReason`, the worker and run it came from (`agentRef`, `runId`), and the records it is about.
+- [Approve or reject a review](https://docs.heliyos.ai/api-reference/reviews/approve-or-reject-a-review.md): `POST /v1/platform/reviews/{id}/decisions`. Records a person's decision on a pending review and acts on it.
+
+## API reference: Scouts
+
+- [List workspace Scouts](https://docs.heliyos.ai/api-reference/scouts/list-workspace-scouts.md): `GET /v1/platform/global-scouts`. Returns every workspace Scout, built-in and custom, sorted by category and then name.
+- [Get a workspace Scout](https://docs.heliyos.ai/api-reference/scouts/get-a-workspace-scout.md): `GET /v1/platform/global-scouts/{id}`. Returns one workspace Scout with its signal totals, its latest signal and how many companies it is running on.
+- [Create a custom Scout](https://docs.heliyos.ai/api-reference/scouts/create-a-custom-scout.md): `POST /v1/platform/global-scouts`. Creates a custom workspace Scout and starts a preview run of its query.
+- [Update a custom Scout](https://docs.heliyos.ai/api-reference/scouts/update-a-custom-scout.md): `PATCH /v1/platform/global-scouts/{id}`. Changes a custom Scout's fields.
+- [Set a workspace Scout state](https://docs.heliyos.ai/api-reference/scouts/set-a-workspace-scout-state.md): `POST /v1/platform/global-scouts/{id}/state`. Activates, pauses, confirms or discards a workspace Scout.
+- [Delete a custom Scout](https://docs.heliyos.ai/api-reference/scouts/delete-a-custom-scout.md): `DELETE /v1/platform/global-scouts/{id}`. Deletes a custom Scout permanently, with every company Scout it runs on, and stops their monitors.
+- [List company Scouts](https://docs.heliyos.ai/api-reference/scouts/list-company-scouts.md): `GET /v1/platform/companies/{id}/scouts`. Returns the Scouts running on one company, newest first.
+- [Add Scouts to a company](https://docs.heliyos.ai/api-reference/scouts/add-scouts-to-a-company.md): `POST /v1/platform/companies/{id}/scouts`. Starts the given workspace Scouts on one company.
+- [Remove company Scouts](https://docs.heliyos.ai/api-reference/scouts/remove-company-scouts.md): `DELETE /v1/platform/companies/{id}/scouts`. Stops and deletes every company Scout running on one company.
+
+## API reference: Signals
+
+- [List signals](https://docs.heliyos.ai/api-reference/signals/list-signals.md): `GET /v1/platform/signals`. Returns the workspace's signals, most recently detected first.
+- [List workspace Scout signals](https://docs.heliyos.ai/api-reference/signals/list-workspace-scout-signals.md): `GET /v1/platform/global-scouts/{id}/signals`. Returns the signals one workspace Scout found across every company it runs on, most recently detected first, each with `companyName`.
+- [Mark a signal read](https://docs.heliyos.ai/api-reference/signals/mark-a-signal-read.md): `POST /v1/platform/signals/{id}/read`. Sets one signal's status to `read`.
+- [Mark signals read in bulk](https://docs.heliyos.ai/api-reference/signals/mark-signals-read-in-bulk.md): `POST /v1/platform/signals/bulk-read`. Marks every `new` signal of one company, one company Scout, or both, read in one update.
+
+## API reference: Watchlist
+
+- [Get watchlist statistics](https://docs.heliyos.ai/api-reference/watchlist/get-watchlist-statistics.md): `GET /v1/platform/watchlist/statistics`. Returns counts of the work done on watched companies: linked tasks (and how many are completed), Autonomous Updates runs, meetings and deals, plus how many watched companies have each account status and engagement status.
+- [Watch a company](https://docs.heliyos.ai/api-reference/watchlist/watch-a-company.md): `POST /v1/platform/companies/{id}/watch`. Adds a company record to the watchlist.
+- [Unwatch a company](https://docs.heliyos.ai/api-reference/watchlist/unwatch-a-company.md): `DELETE /v1/platform/companies/{id}/watch`. Removes a company from the watchlist and frees its Watcher.
+
+## API reference: Knowledge base
+
+- [Get the knowledge base](https://docs.heliyos.ai/api-reference/knowledge-base/get-the-knowledge-base.md): `GET /v1/auth/organizations/current`. Returns the workspace your API key belongs to with its knowledge base: the business context, the four fixed texts and the custom entries, plus the workspace's profile (name, website, industry, time zone and address).
+- [Update the knowledge base](https://docs.heliyos.ai/api-reference/knowledge-base/update-the-knowledge-base.md): `PATCH /v1/auth/organizations/current`. Changes the knowledge base, the business context and the workspace profile.
+
+## API reference: Files
+
+- [Create an upload URL](https://docs.heliyos.ai/api-reference/files/create-an-upload-url.md): `POST /v1/platform/attachments/presigned-urls`. Returns a short-lived signed URL to upload one file's bytes to, the first of three steps.
+- [Create a file](https://docs.heliyos.ai/api-reference/files/create-a-file.md): `POST /v1/platform/attachments`. Records a file you uploaded with an upload URL, as a knowledge base file or as a file attached to records, tasks or other resources.
+- [List files](https://docs.heliyos.ai/api-reference/files/list-files.md): `GET /v1/platform/attachments`. Returns the workspace's files, newest first: knowledge base files and files attached to resources.
+- [Get a file](https://docs.heliyos.ai/api-reference/files/get-a-file.md): `GET /v1/platform/attachments/{id}`. Returns one file's details: name, content type, size, kind and the resources it is attached to.
+- [Get a file download link](https://docs.heliyos.ai/api-reference/files/get-a-file-download-link.md): `GET /v1/platform/attachments/{id}/download`. Returns a signed link that downloads the file under its `fileName`.
+- [Delete a file](https://docs.heliyos.ai/api-reference/files/delete-a-file.md): `DELETE /v1/platform/attachments/{id}`. Deletes a file permanently.
+
+## API reference: Labels
+
+- [List label groups](https://docs.heliyos.ai/api-reference/labels/list-label-groups.md): `GET /v1/platform/classification-labels`. Returns the workspace's label groups with their labels, newest first.
+- [Create a label group](https://docs.heliyos.ai/api-reference/labels/create-a-label-group.md): `POST /v1/platform/classification-labels`. Creates a label group, optionally with its labels.
+- [Update a label group](https://docs.heliyos.ai/api-reference/labels/update-a-label-group.md): `PATCH /v1/platform/classification-labels/{id}`. Changes a group's name, description, active state or labels.
+- [Delete a label group](https://docs.heliyos.ai/api-reference/labels/delete-a-label-group.md): `DELETE /v1/platform/classification-labels/{id}`. Deletes a label group and its labels permanently.
+
+## API reference: Team
+
+- [List team members](https://docs.heliyos.ai/api-reference/team/list-team-members.md): `GET /v1/auth/team-memberships`. Returns the workspace's memberships: people who joined and invitations still pending, oldest first.
+- [Invite a team member](https://docs.heliyos.ai/api-reference/team/invite-a-team-member.md): `POST /v1/auth/team-memberships`. Invites a person to the workspace with a role and emails them an invitation link.
+- [Remove a team member](https://docs.heliyos.ai/api-reference/team/remove-a-team-member.md): `DELETE /v1/auth/team-memberships/{id}`. Removes a person from the workspace, or cancels a pending invitation, by membership id.
+- [Change a team member role](https://docs.heliyos.ai/api-reference/team/change-a-team-member-role.md): `PATCH /v1/auth/team-memberships/{id}/role`. Gives a member or a pending invitation a new role, by membership id.
+- [List roles](https://docs.heliyos.ai/api-reference/team/list-roles.md): `GET /v1/auth/roles`. Returns the roles you can give people, with the ids that Invite a team member takes.
+
+## API reference: Notification settings
+
+- [Get notification settings](https://docs.heliyos.ai/api-reference/notification-settings/get-notification-settings.md): `GET /v1/platform/notification-settings`. Returns the workspace's notification settings: whether notifications are on, who receives them, and which events notify and how often.
+- [Update notification settings](https://docs.heliyos.ai/api-reference/notification-settings/update-notification-settings.md): `PATCH /v1/platform/notification-settings`. Changes the workspace's notification settings, creating them the first time.
+
+## MCP server: Get started
+
+- [Heliyos MCP server](https://docs.heliyos.ai/mcp/overview.md): Give Claude, Cursor, Codex, VS Code and other AI agents safe, scoped access to your Heliyos workspace.
+- [Install](https://docs.heliyos.ai/mcp/install.md): Add the Heliyos MCP server to Claude Code, Codex, Cursor or VS Code in a minute.
+- [All install options](https://docs.heliyos.ai/mcp/clients.md): Install the Heliyos MCP server in Claude Code, Codex, Cursor, VS Code, Claude Desktop, Antigravity or any MCP client.
+- [Configuration](https://docs.heliyos.ai/mcp/configuration.md): Environment variables and the tool timeout the MCP server needs.
+
+## MCP server: Tools
+
+- [Tool reference](https://docs.heliyos.ai/mcp/tools/index.md): All 73 tools the Heliyos MCP server offers, by group.
+- [Records](https://docs.heliyos.ai/mcp/tools/records.md): 6 tools: heliyos_records_list, heliyos_records_get, heliyos_records_create, heliyos_records_update, heliyos_records_delete, heliyos_records_lookup.
+- [Timeline and activity](https://docs.heliyos.ai/mcp/tools/timeline-and-activity.md): 4 tools: heliyos_records_timeline, heliyos_records_events, heliyos_interactions_list, heliyos_interactions_get.
+- [Workspace, objects and fields](https://docs.heliyos.ai/mcp/tools/workspace-objects-and-fields.md): 6 tools: heliyos_organization_get, heliyos_objects_list, heliyos_objects_get, heliyos_fields_create, heliyos_fields_update, heliyos_fields_delete.
+- [Notes](https://docs.heliyos.ai/mcp/tools/notes.md): 5 tools: heliyos_notes_list, heliyos_notes_get, heliyos_notes_create, heliyos_notes_update, heliyos_notes_delete.
+- [Tasks](https://docs.heliyos.ai/mcp/tools/tasks.md): 7 tools: heliyos_tasks_list, heliyos_tasks_get, heliyos_tasks_events, heliyos_tasks_create, heliyos_tasks_update, heliyos_tasks_delete, heliyos_tasks_run.
+- [Scouts and signals](https://docs.heliyos.ai/mcp/tools/scouts-and-signals.md): 10 tools: heliyos_scouts_list, heliyos_scouts_get, heliyos_scouts_create, heliyos_scouts_update, heliyos_scouts_delete, heliyos_companies_scouts_list, heliyos_companies_scouts_add, heliyos_companies_scouts_remove, heliyos_signals_list, heliyos_signals_mark_read.
+- [Ask, runs and reviews](https://docs.heliyos.ai/mcp/tools/ask-runs-and-reviews.md): 6 tools: heliyos_ask, heliyos_runs_get, heliyos_runs_list, heliyos_reviews_list, heliyos_reviews_get, heliyos_reviews_decide.
+- [Workers, triggers and tools](https://docs.heliyos.ai/mcp/tools/workers-triggers-and-tools.md): 7 tools: heliyos_workers_list, heliyos_workers_get, heliyos_workers_create, heliyos_workers_update, heliyos_workers_delete, heliyos_triggers_list, heliyos_workers_tools_list.
+- [Knowledge base and files](https://docs.heliyos.ai/mcp/tools/knowledge-base-and-files.md): 8 tools: heliyos_knowledge_get, heliyos_knowledge_update, heliyos_knowledge_entries_set, heliyos_knowledge_entries_delete, heliyos_files_list, heliyos_files_get, heliyos_files_upload, heliyos_files_delete.
+- [Watchlist](https://docs.heliyos.ai/mcp/tools/watchlist.md): 3 tools: heliyos_watchlist_get, heliyos_companies_watch, heliyos_companies_unwatch.
+- [Labels](https://docs.heliyos.ai/mcp/tools/labels.md): 4 tools: heliyos_labels_list, heliyos_labels_create, heliyos_labels_update, heliyos_labels_delete.
+- [Team](https://docs.heliyos.ai/mcp/tools/team.md): 4 tools: heliyos_team_members_list, heliyos_team_members_invite, heliyos_team_members_remove, heliyos_team_members_change_role.
+- [Notification settings](https://docs.heliyos.ai/mcp/tools/notification-settings.md): 2 tools: heliyos_notification_settings_get, heliyos_notification_settings_update.
+- [Usage](https://docs.heliyos.ai/mcp/tools/usage.md): 1 tool: heliyos_usage_get.
+
+## MCP server: Operate
+
+- [Prompts and resources](https://docs.heliyos.ai/mcp/prompts-and-resources.md): Ready-made prompts and the record resource the MCP server offers.
+- [Security](https://docs.heliyos.ai/mcp/security.md): Where your key goes, what the server sends, and how to keep access tight.
+- [Troubleshooting](https://docs.heliyos.ai/mcp/troubleshooting.md): Fixes for the errors you are most likely to see.
+
+## Changelog
+
+- [Changelog](https://docs.heliyos.ai/changelog.md): New endpoints, MCP tools and changes to the Heliyos API and MCP server.
+
+## Optional
+
+- [Full text of every page](https://docs.heliyos.ai/llms-full.txt): every page of these docs in one Markdown file.
+- [Heliyos website summary](https://www.heliyos.ai/llms.txt): the product, its features, integrations, pricing and comparisons.
+- [MCP server on npm](https://www.npmjs.com/package/@heliyos/mcp): the `@heliyos/mcp` package.
+- [MCP server source](https://github.com/heliyos-ai/heliyos-mcp): the MCP server's code and README.

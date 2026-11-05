@@ -1,0 +1,52 @@
+---
+title: "All install options"
+description: "Install the Heliyos MCP server in Claude Code, Codex, Cursor, VS Code, Claude Desktop, Antigravity or any MCP client."
+---
+
+import { ClientGuide } from "/snippets/mcp-clients.jsx";
+
+Every client runs the same command, `npx -y @heliyos/mcp`, with your API key in the `HELIYOS_API_KEY` environment variable. Replace `YOUR_HELIYOS_API_KEY` in the snippets with your key. You need Node.js 20 or later and a key from **Settings → API keys** (see [Authentication](/authentication)).
+
+<Warning>
+  Config files that hold the key in plain text are as sensitive as the key. Keep them out of shared folders and repositories. Where a client can read the key from your environment or a secret store, prefer that.
+</Warning>
+
+## Claude Code
+
+<ClientGuide id="claude-code" />
+
+## Codex
+
+<ClientGuide id="codex" />
+
+<Tip>
+  Give Codex a 120 second tool timeout so `heliyos_ask` can finish. See [Tool timeout](/mcp/configuration#tool-timeout).
+</Tip>
+
+## Cursor
+
+<ClientGuide id="cursor" />
+
+## VS Code
+
+<ClientGuide id="vscode" />
+
+## Claude Desktop
+
+<ClientGuide id="claude-desktop" />
+
+<Note>
+  Custom connectors on claude.ai and in the Claude connector directory need a hosted MCP server with OAuth. Heliyos does not offer one yet, so use a local client for now.
+</Note>
+
+## Antigravity
+
+<ClientGuide id="antigravity" />
+
+## Other clients
+
+<ClientGuide id="other" />
+
+## Check it works
+
+Ask your agent: *"Which Heliyos workspace am I connected to?"* It should call `heliyos_organization_get` and answer with your workspace's name. If it does not, see [Troubleshooting](/mcp/troubleshooting).

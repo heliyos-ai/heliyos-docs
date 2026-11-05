@@ -1,0 +1,59 @@
+---
+title: "Heliyos MCP server"
+sidebarTitle: "Overview"
+description: "Give Claude, Cursor, Codex, VS Code and other AI agents safe, scoped access to your Heliyos workspace."
+keywords: ["Heliyos MCP server", "Model Context Protocol", "MCP server for CRM", "MCP server for sales", "AI agent tools"]
+---
+
+`@heliyos/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server. It runs on your machine, talks to your AI client over stdio, and calls the Heliyos API with your workspace API key.
+
+With it, an agent can:
+
+- find and update companies, people, deals and custom objects
+- read a record's timeline, emails and meetings
+- write notes and tasks, and start Heliyos workers on a task
+- manage Scouts, read their signals and keep the watchlist
+- read and update the knowledge base your workers use, and upload its files and attachments
+- hand a job to Heliyos with `heliyos_ask` and follow the run
+- list the reviews waiting on your team, and approve or reject them
+
+Important actions that workers take still wait for review in Heliyos, so your team stays in control.
+
+<CardGroup cols={3}>
+  <Card title="Install" icon="/icons/terminal.svg" href="/mcp/install">
+    One command for Claude Code, a config block for every other client.
+  </Card>
+  <Card title="All tools" icon="/icons/layers.svg" href="/mcp/tools/index">
+    73 tools, grouped by resource, with every input documented.
+  </Card>
+  <Card title="MCP server on npm" icon="/icons/code.svg" href="https://www.npmjs.com/package/@heliyos/mcp">
+    The `@heliyos/mcp` package, its versions and its README.
+  </Card>
+</CardGroup>
+
+## How it works
+
+```text
+AI client (Claude, Cursor, Codex, VS Code ...)
+   │  stdio (JSON-RPC)
+   ▼
+@heliyos/mcp   runs on your machine, holds HELIYOS_API_KEY
+   │  HTTPS, Authorization: Bearer heliyos_...
+   ▼
+api-prod.heliyos.ai  ──► your workspace
+```
+
+- **Same API, same rules.** Every tool calls documented [API endpoints](/api-reference/introduction). Each tool page links to them.
+- **Your key stays local.** The server reads it from its environment and sends it only to the Heliyos API over HTTPS.
+- **Marked by risk.** Every tool declares whether it reads, writes or is destructive, so your client can ask before anything changes.
+
+## Before you start
+
+You need:
+
+- **Node.js 20 or later.** Check with `node -v`.
+- **A Heliyos API key** from **Settings → API keys**. Only workspace owners and admins can create one. See [Authentication](/authentication).
+
+<Note>
+  Custom connectors on claude.ai and in the Claude connector directory need a hosted MCP server with OAuth. Heliyos does not offer one yet, so use a local client for now.
+</Note>

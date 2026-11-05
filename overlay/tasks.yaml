@@ -1,0 +1,587 @@
+tag:
+  name: Tasks
+  icon: /icons/app-tasks.svg
+  order: 60
+  description: >-
+    Work items for people and workers, optionally linked to records. A task can be assigned to
+    people, to workers, or both, and workers can be started on it directly.
+
+components:
+  TaskStatus:
+    type: string
+    enum: [backlog, in_progress, scheduled_for_later, on_hold, cancelled, completed]
+    description: |
+      The task's stage on the board:
+      - `backlog`: not started. The default.
+      - `in_progress`: being worked on, by a person or by workers.
+      - `scheduled_for_later`: a worker set a wake-up for it and will pick it up at that time.
+      - `on_hold`: waiting on a person or an outside event.
+      - `cancelled`: dropped.
+      - `completed`: done.
+
+  TaskPriority:
+    type: string
+    enum: [none, low, medium, high, urgent]
+    description: The task's priority. Defaults to `medium`.
+
+  TaskAssignee:
+    type: object
+    description: A person assigned to the task.
+    properties:
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The user's id. Must be a member of the workspace.
+      name:
+        type: string
+        description: The name shown on the task. Stored as sent.
+      profilePicture:
+        type: string
+        nullable: true
+        description: An avatar URL shown on the task. Stored as sent.
+
+  TaskWorkerAssignment:
+    type: object
+    description: A worker assigned to the task.
+    properties:
+      agentId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The worker's id. Must be one of the workspace's workers.
+      name:
+        type: string
+        description: The worker's name, shown on the task. Stored as sent.
+      role:
+        type: string
+        enum: [executor, reviewer, approver]
+        description: "`executor` does the work, `reviewer` checks it, `approver` signs it off."
+
+  TaskRunState:
+    type: object
+    description: >-
+      The workers' current or last run on the task. Present only when the task has had a run, a
+      worker note or a scheduled wake-up.
+    properties:
+      status:
+        type: string
+        description: >-
+          The run's status, for example `queued`, `running`, `paused`, `awaiting_approval` (a worker
+          action waits for review), `waiting`, `completed`, `failed` or `stopped`. `stalled` means the run
+          says it is running but has written nothing for 20 minutes.
+      summary:
+        type: string
+        description: The last note a worker left on the task.
+      planSteps:
+        type: integer
+        description: Steps in the run's plan.
+      completedSteps:
+        type: integer
+        description: Plan steps completed or skipped.
+      artifactsCount:
+        type: integer
+        description: Files linked to the task.
+      lastRunAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the run last changed.
+      hasSchedule:
+        type: boolean
+        description: True when a worker scheduled a wake-up for the task.
+      nextRunReason:
+        type: string
+        description: Why the worker scheduled the wake-up.
+      nextRunAt:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the wake-up fires. Absent for a recurring schedule.
+
+  Task:
+    type: object
+    additionalProperties: true
+    properties:
+      _id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The task's id. Create and update responses name it `id` instead.
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the task belongs to.
+      title:
+        type: string
+        description: The task's title. Can be an empty string.
+      description:
+        type: string
+        description: The task's body, as plain text or markdown.
+      status: { $ref: "#/components/schemas/TaskStatus" }
+      priority: { $ref: "#/components/schemas/TaskPriority" }
+      isFinished:
+        type: boolean
+        description: >-
+          A done flag kept beside `status`. Heliyos does not derive it from `status`: set it yourself
+          when you complete or reopen a task.
+      dueDate:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the task is due. Absent when none is set.
+      assignedUser:
+        type: array
+        description: The people assigned to the task.
+        items: { $ref: "#/components/schemas/TaskAssignee" }
+      assignedAgents:
+        type: array
+        description: The workers assigned to the task.
+        items: { $ref: "#/components/schemas/TaskWorkerAssignment" }
+      relationships:
+        type: array
+        description: >-
+          The records the task is linked to. In list and get responses each entry is hydrated with the
+          record's field values in `data` and its object in `schema`.
+        items: { $ref: "#/components/schemas/Relationship" }
+      currentRunId:
+        type: string
+        description: The id of the workers' current or last run on the task.
+      currentRun: { $ref: "#/components/schemas/TaskRunState" }
+      artifactsCount:
+        type: integer
+        description: Files linked to the task. List and get only.
+      agentPaused:
+        type: boolean
+        description: True when workers are paused on this task. Starting a run clears it.
+      agentRun:
+        type: object
+        additionalProperties: true
+        description: The last note a worker left on the task (`note`, `runId`, `agent`, `at`).
+      planCheckpoints:
+        type: array
+        description: >-
+          The steps of the workers' plan for the task, each with `id`, `title`, `description`, `worker`,
+          `note` and `status` (`pending`, `running`, `completed`, `failed` or `skipped`).
+        items: { type: object, additionalProperties: true }
+      hubspotTaskId:
+        type: string
+        description: The linked HubSpot task id, when the workspace syncs tasks with HubSpot.
+      metadata: { $ref: "#/components/schemas/AuditMetadata" }
+
+  TaskRelationshipInput:
+    type: object
+    description: A record to link the task to.
+    required: [objectId]
+    properties:
+      objectId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: Id of the linked record, task, note or interaction. Must belong to this workspace.
+      schemaId:
+        type: string
+        nullable: true
+        description: The linked record's object (base schema) id. Recommended for records. Empty or null is dropped.
+      objectType:
+        type: string
+        nullable: true
+        description: "`company`, `people`, `deals` or a custom object type for records; `task`, `note` or `interaction` otherwise."
+        example: company
+      data:
+        type: object
+        additionalProperties: true
+        description: An optional display snapshot of the record, stored as sent. Get and list replace it with the record's current values.
+
+  TaskRunStart:
+    type: object
+    properties:
+      triggered:
+        type: boolean
+        description: True when this call started a new run. False when a run already open on the task was returned instead.
+      orchestratorRunId:
+        type: string
+        description: The run's id. Follow it with `GET /v1/platform/workers/runs/{id}`.
+      status:
+        type: string
+        description: >-
+          The run's status: `queued` for a new run; for an existing run, its current status
+          (`queued`, `running`, `paused`, `awaiting_approval` or `waiting`).
+
+operations:
+  listTasks:
+    summary: List tasks
+    description: |
+      Returns the workspace's tasks, newest first. Each task includes its linked records (with their
+      field values) and the state of the workers' current run.
+
+      By default the list pages with a cursor: pass `limit`, then send `meta.pagination.next_cursor`
+      back as `cursor` for the next page. A `sort`, `groupBy`, or `page` (as a parameter or inside
+      `filters`) switches to page-number paging, where `meta.pagination` holds `page`, `limit`,
+      `totalPages`, `count` and `hasMore`. See [Pagination](/api-reference/pagination) and
+      [Filtering and sorting](/api-reference/filtering).
+
+      To list only the tasks linked to one record, send `{"relatedObjectId": "<record id>"}` in `filters`.
+      To list one stage, send `{"filters": [{"field": "status", "operator": "equals", "value": "in_progress"}]}`.
+    parameters:
+      limit:
+        description: Tasks per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: >-
+          The `next_cursor` from the previous page. Only valid with the default order (no `sort`, no
+          `groupBy`); a 400 otherwise. When you send both `cursor` and `page`, `cursor` wins.
+      page:
+        description: A page number, starting at 1, for page-number paging. Pages are `limit` tasks long.
+      filters:
+        description: |
+          A JSON object, URL-encoded. Keys:
+          - `search` (string): matches text in the title or description, case-insensitive.
+          - `relatedObjectId` (id): only tasks linked to this record.
+          - `filters` (array): conditions `{ "field", "operator", "value", "conjunction" }`. Conditions are
+            combined with AND; a condition with `"conjunction": "or"` joins an OR group instead. Operators:
+            `equals`, `not_equals`, `contains`, `in` (value is a list), `gt` or `after`, `gte`, `lt` or `before`,
+            `lte`, `empty`, `not_empty`. Fields include `status`, `priority`, `title`, `description`, `dueDate`,
+            `isFinished` (value `"true"` or `"false"` as a string), `assignedUser` (matches the assignee's name,
+            case-insensitive), `metadata.created.by` (a user id),
+            `metadata.created.at` and `metadata.updated.at` (`equals` matches the whole day, plus `after`, `before`).
+          - `sort` (array): `{ "field", "direction" }` with direction `asc` or `desc`, for example
+            `[{"field": "dueDate", "direction": "asc"}]`. Text sorts ignore case.
+          - `groupBy` (string): one of `status`, `priority`, `assignedUser`, `dueDate`, `createdAt`,
+            `isFinished`, `title`. Each item in `data` is then a group `{ groupValue, count, tasks }`
+            instead of a task. Grouping by `status` or `priority` returns one group per value, each with
+            its total `count` and its first `pageSize` tasks. Other groupings return at most 1000 tasks in all.
+          - `page` and `pageSize`: page-number paging. `pageSize` is capped at 200.
+        example: '{"relatedObjectId":"66f1a8c3e4b0a1b2c3d4e5f6","filters":[{"field":"status","operator":"equals","value":"in_progress"}]}'
+    response:
+      description: A page of tasks.
+      message: Tasks fetched successfully.
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/Task" }
+      example:
+        - _id: 6728c9afb2c3d4e5f6a7b8ce
+          organizationId: 66a0f1e2d3c4b5a697887766
+          title: Send security questionnaire to Northwind Traders
+          description: Fill in the questionnaire Ana sent and return it by Friday.
+          status: in_progress
+          priority: high
+          isFinished: false
+          dueDate: "2026-11-07T17:00:00.000Z"
+          assignedUser:
+            - { id: 66a0f1e2d3c4b5a697881111, name: Priya Patel, profilePicture: null }
+          assignedAgents:
+            - { agentId: 66a0f1e2d3c4b5a697882222, name: Account Researcher, role: executor }
+          relationships:
+            - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+              schemaId: 66a0f1e2d3c4b5a697880001
+              objectType: company
+              data: { company_name: Northwind Traders, domain: northwind.example.com }
+              schema: { _id: 66a0f1e2d3c4b5a697880001, name: Companies, objectType: company }
+          currentRunId: 3f9a1c2b7d4e4f0a9b8c7d6e5f4a3b2c
+          currentRun:
+            status: awaiting_approval
+            planSteps: 3
+            completedSteps: 2
+            artifactsCount: 1
+            lastRunAt: "2026-11-04T10:20:00.000Z"
+          artifactsCount: 1
+          agentPaused: false
+          metadata:
+            created: { at: "2026-11-04T09:40:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+            updated: { at: "2026-11-04T10:20:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": "VALIDATION_FAILED: `filters` is not a JSON object, names an unknown `groupBy`, has a malformed condition or `relatedObjectId`, or `cursor` was sent with a sort or grouping."
+
+  getTask:
+    summary: Get a task
+    description: |
+      Returns one task with its full description, its linked records (each with the record's field
+      values in `data` and its object in `schema`), its plan and the state of the workers' current run.
+    parameters:
+      id:
+        description: The task's id.
+        example: 6728c9afb2c3d4e5f6a7b8ce
+    response:
+      description: The task.
+      message: Task fetched successfully.
+      data: { $ref: "#/components/schemas/Task" }
+      example:
+        _id: 6728c9afb2c3d4e5f6a7b8ce
+        organizationId: 66a0f1e2d3c4b5a697887766
+        title: Send security questionnaire to Northwind Traders
+        description: Fill in the questionnaire Ana sent and return it by Friday.
+        status: in_progress
+        priority: high
+        isFinished: false
+        dueDate: "2026-11-07T17:00:00.000Z"
+        assignedUser:
+          - { id: 66a0f1e2d3c4b5a697881111, name: Priya Patel, profilePicture: null }
+        assignedAgents:
+          - { agentId: 66a0f1e2d3c4b5a697882222, name: Account Researcher, role: executor }
+        relationships:
+          - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+            data: { company_name: Northwind Traders, domain: northwind.example.com }
+            schema: { _id: 66a0f1e2d3c4b5a697880001, name: Companies, objectType: company }
+        planCheckpoints:
+          - { id: step-1, kind: step, title: Read the questionnaire, worker: account_researcher, status: completed }
+          - { id: step-2, kind: step, title: Draft the answers, worker: account_researcher, status: completed }
+          - { id: step-3, kind: step, title: Email the answers to Ana, worker: email_writer, status: pending }
+        currentRunId: 3f9a1c2b7d4e4f0a9b8c7d6e5f4a3b2c
+        currentRun:
+          status: awaiting_approval
+          planSteps: 3
+          completedSteps: 2
+          artifactsCount: 1
+          lastRunAt: "2026-11-04T10:20:00.000Z"
+        artifactsCount: 1
+        agentPaused: false
+        metadata:
+          created: { at: "2026-11-04T09:40:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T10:20:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "404": "NOT_FOUND: no task with this id in the workspace."
+
+  createTask:
+    summary: Create a task
+    description: |
+      Creates a task and, optionally, links it to records and assigns people and workers.
+
+      After the task is saved, Heliyos records an audit event, sends the workspace's task-created
+      notification email if it is turned on, creates the task in HubSpot if HubSpot is connected, and
+      fires the `task.created` trigger: workers that subscribe to new tasks can start on it, and their
+      runs use credits. Assigning a worker does not start it by itself. To start workers on the task now,
+      call Run workers on a task with the returned id.
+
+      Calling this twice creates two tasks.
+    requestBody:
+      schema:
+        type: object
+        required: [title]
+        properties:
+          title:
+            type: string
+            description: The task's title. Required, but may be an empty string.
+            example: Send security questionnaire to Northwind Traders
+          description:
+            type: string
+            description: The body, as plain text or markdown. May be empty.
+          status:
+            allOf: [{ $ref: "#/components/schemas/TaskStatus" }]
+            description: The stage. Defaults to `backlog`. Setting it does not change `isFinished`.
+          priority:
+            type: string
+            enum: [none, low, medium, high, urgent]
+            description: The priority. Defaults to `medium`. Any other value is rejected with a 400.
+          dueDate:
+            type: string
+            format: date-time
+            description: When the task is due, as an ISO 8601 date or date-time.
+            example: "2026-11-07T17:00:00.000Z"
+          isFinished:
+            type: boolean
+            description: The done flag. Defaults to false. Send `true` together with `status` `completed`.
+          assignedUser:
+            type: array
+            description: >-
+              People to assign. Each `id` must be a member of the workspace (you can always assign
+              yourself); `name` and `profilePicture` are stored as sent for display.
+            items: { $ref: "#/components/schemas/TaskAssignee" }
+          assignedAgents:
+            type: array
+            description: Workers to assign. Each `agentId` is required and must be one of the workspace's workers.
+            items:
+              allOf: [{ $ref: "#/components/schemas/TaskWorkerAssignment" }]
+              required: [agentId]
+          relationships:
+            type: array
+            description: Records (or tasks, notes, interactions) to link the task to. At most 200, each in this workspace.
+            items: { $ref: "#/components/schemas/TaskRelationshipInput" }
+      example:
+        title: Send security questionnaire to Northwind Traders
+        description: Fill in the questionnaire Ana sent and return it by Friday.
+        status: backlog
+        priority: high
+        dueDate: "2026-11-07T17:00:00.000Z"
+        assignedUser:
+          - { id: 66a0f1e2d3c4b5a697881111, name: Priya Patel }
+        relationships:
+          - objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+            schemaId: 66a0f1e2d3c4b5a697880001
+            objectType: company
+    response:
+      description: >-
+        The created task as stored: its id is in `id` (not `_id`), relationships are not hydrated, and
+        there is no `currentRun` yet.
+      message: Task created successfully.
+      data: { $ref: "#/components/schemas/Task" }
+      example:
+        id: 6728c9afb2c3d4e5f6a7b8ce
+        organizationId: 66a0f1e2d3c4b5a697887766
+        title: Send security questionnaire to Northwind Traders
+        description: Fill in the questionnaire Ana sent and return it by Friday.
+        status: backlog
+        priority: high
+        isFinished: false
+        dueDate: "2026-11-07T17:00:00.000Z"
+        assignedUser:
+          - { id: 66a0f1e2d3c4b5a697881111, name: Priya Patel, _id: 6728c9afb2c3d4e5f6a7b8d1 }
+        assignedAgents: []
+        relationships:
+          - { objectId: 66f1a8c3e4b0a1b2c3d4e5f6, schemaId: 66a0f1e2d3c4b5a697880001, objectType: company }
+        planCheckpoints: []
+        agentPaused: false
+        metadata:
+          created: { at: "2026-11-04T09:40:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:40:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": "VALIDATION_FAILED: a field has the wrong type or value (for example an unknown `status` or `priority`), or an id is malformed. Nothing is written."
+      "404": "NOT_FOUND: a relationships entry, assignee or worker is not in this workspace. Nothing is written."
+
+  updateTask:
+    summary: Update a task
+    description: |
+      Changes the fields you send and keeps the rest. Send at least one field. `relationships`,
+      `assignedUser` and `assignedAgents`, when sent, each replace the whole list: include the entries
+      you want to keep.
+
+      Setting `status` does not change `isFinished`; send both when you complete or reopen a task.
+      Moving a task off `scheduled_for_later` cancels the worker's pending wake-up.
+
+      After the write, Heliyos records an audit event, sends the workspace's task-updated notification
+      email if it is turned on, updates the task in HubSpot if it is synced there, and fires a trigger
+      (`task.cancelled` when the status changes to `cancelled`, `task.updated` otherwise): workers that
+      subscribe to it can start, and their runs use credits. No trigger fires while workers are paused on
+      the task, or when the change only adds or removes whitespace.
+    parameters:
+      id:
+        description: The task's id.
+        example: 6728c9afb2c3d4e5f6a7b8ce
+    requestBody:
+      schema:
+        type: object
+        minProperties: 1
+        properties:
+          title:
+            type: string
+            description: A new title. May be an empty string.
+          description:
+            type: string
+            description: A new body. May be an empty string.
+          status:
+            allOf: [{ $ref: "#/components/schemas/TaskStatus" }]
+            description: A new stage.
+          priority:
+            type: string
+            enum: [none, low, medium, high, urgent]
+            description: A new priority. Use one of these values; an update does not check it.
+          dueDate:
+            type: string
+            format: date-time
+            description: A new due date, as an ISO 8601 date or date-time.
+          isFinished:
+            type: boolean
+            description: The done flag.
+          assignedUser:
+            type: array
+            description: >-
+              The complete new list of people. Newly added ids must be workspace members (you can always
+              assign yourself); ids already on the task are kept even if that person has left.
+            items: { $ref: "#/components/schemas/TaskAssignee" }
+          assignedAgents:
+            type: array
+            description: >-
+              The complete new list of workers. Newly added `agentId`s must be workspace workers; each
+              entry needs `agentId`.
+            items:
+              allOf: [{ $ref: "#/components/schemas/TaskWorkerAssignment" }]
+              required: [agentId]
+          relationships:
+            type: array
+            description: The complete new set of links. Replaces the current links. At most 200.
+            items: { $ref: "#/components/schemas/TaskRelationshipInput" }
+      example:
+        status: completed
+        isFinished: true
+    response:
+      description: >-
+        The updated task as stored: its id is in `id` (not `_id`) and relationships are not hydrated.
+      message: Task updated successfully.
+      data: { $ref: "#/components/schemas/Task" }
+      example:
+        id: 6728c9afb2c3d4e5f6a7b8ce
+        organizationId: 66a0f1e2d3c4b5a697887766
+        title: Send security questionnaire to Northwind Traders
+        status: completed
+        priority: high
+        isFinished: true
+        relationships:
+          - { objectId: 66f1a8c3e4b0a1b2c3d4e5f6, schemaId: 66a0f1e2d3c4b5a697880001, objectType: company }
+        metadata:
+          created: { at: "2026-11-04T09:40:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-05T08:15:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": "VALIDATION_FAILED: an empty body, a field with the wrong type or value, or a malformed id. Nothing is written."
+      "404": "NOT_FOUND: no task with this id, or a relationships entry, assignee or worker is not in this workspace. Nothing is written."
+
+  deleteTask:
+    summary: Delete a task
+    description: |
+      Deletes a task permanently. Linked records are not changed. Heliyos records an audit event and
+      fires the `task.deleted` trigger (unless workers are paused on the task), so subscribed workers
+      can react.
+    parameters:
+      id:
+        description: The task's id.
+        example: 6728c9afb2c3d4e5f6a7b8ce
+    response:
+      description: The task was deleted.
+      message: Task deleted successfully
+      data:
+        type: object
+        properties:
+          message:
+            type: string
+            description: Always `Task deleted successfully`.
+      example:
+        message: Task deleted successfully
+    errors:
+      "404": "NOT_FOUND: no task with this id in the workspace."
+    content: |
+      <Warning>Deleting a task cannot be undone.</Warning>
+
+  createTaskRun:
+    summary: Run workers on a task
+    description: |
+      Starts Heliyos workers on a task now, the same as pressing Play on the task. The call takes no body.
+
+      What it does, in order:
+      1. Clears the task's paused flag and, unless the task is `completed` or `cancelled`, moves it to
+         `in_progress` (and sets `isFinished` to false).
+      2. Looks for a run already open on the task (`queued`, `running`, `paused`, `awaiting_approval` or
+         `waiting`). If there is one, it is returned with `triggered: false` and no new run starts. A
+         `queued` or `running` run that has written nothing for 20 minutes is treated as dead and does not count.
+      3. Otherwise starts a new run with `triggered: true` and status `queued`. The run starts even when no
+         worker subscribes to new tasks, and it cancels any wake-up a worker had scheduled for the task.
+
+      The call returns as soon as the run is queued. Follow it with `GET /v1/platform/workers/runs/{id}`
+      using `orchestratorRunId`.
+
+      **Credits.** Each time the run calls one of your custom workers, the workspace is charged a fixed
+      number of credits; Heliyos's built-in workers are free. If the workspace cannot cover a custom worker
+      call when the run starts, nothing starts and the call answers 409. Actions the workers take (for
+      example enrichment) can use credits of their own.
+
+      **Reviews.** Workers write companies, people, tasks, notes and email drafts directly. Deal changes,
+      sending email, booking meetings, actions in connected apps and anything a worker asks you to decide
+      wait for a person's review unless the workspace's autopilot settings allow them, and even then a call
+      below the confidence threshold still waits. While an action waits, the run's status is `awaiting_approval`.
+
+      **Idempotency.** Calling again while a run is open returns that run. The check is not atomic, so two
+      calls at the same moment can start two runs.
+    parameters:
+      id:
+        description: The task's id.
+        example: 6728c9afb2c3d4e5f6a7b8ce
+    response:
+      description: The run that is now working the task.
+      message: Task run started.
+      data: { $ref: "#/components/schemas/TaskRunStart" }
+      example:
+        triggered: true
+        orchestratorRunId: 3f9a1c2b7d4e4f0a9b8c7d6e5f4a3b2c
+        status: queued
+    errors:
+      "404": "NOT_FOUND: no task with this id in the workspace."
+      "409": "CONFLICT: the workers did not start, for example because the workspace is out of credits. The message gives the reason. The task is put back as it was."
+      "502": "The workers could not be reached. Nothing started and the task is put back as it was. Try again."
+    content: |
+      <Warning>This starts workers that act on your data and can spend credits. Writes to companies, people, tasks and notes apply without review; deal changes, emails, meetings and actions in connected apps wait for review unless your autopilot settings allow them.</Warning>

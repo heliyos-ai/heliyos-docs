@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Bug in the MCP server
+    url: https://github.com/heliyos-ai/heliyos-mcp/issues
+    about: Problems with the @heliyos/mcp package itself go to its own repository.
+  - name: Security issue
+    url: mailto:soham@heliyos.ai
+    about: Report vulnerabilities privately by email. Please do not open a public issue.
+  - name: Help with your Heliyos workspace
+    url: mailto:soham@heliyos.ai
+    about: Questions about your account, API keys, billing or the Heliyos app.

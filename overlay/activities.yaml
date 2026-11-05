@@ -1,0 +1,337 @@
+tag:
+  name: Activities
+  icon: /icons/app-runs.svg
+  order: 41
+  description: >-
+    The change history of records and tasks: who created, changed or deleted what, and when. People,
+    workers and the system each appear as the actor on the changes they make.
+
+components:
+  RecordEvent:
+    type: object
+    description: >-
+      One change in the audit trail. Snapshots are stored as they were at the time of the change,
+      with credential values (tokens, secrets, passwords, API keys) replaced by `[REDACTED]`.
+    additionalProperties: true
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      timestamp:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the change happened.
+      metadata:
+        type: object
+        additionalProperties: true
+        properties:
+          eventType:
+            type: string
+            enum: [AUDIT, INTERACTION, ENRICHMENT]
+            description: >-
+              `AUDIT`: a person or worker created, changed or deleted something (a record, task, note,
+              comment, file, view and so on). `INTERACTION`: an email thread or meeting was synced,
+              updated or analysed. `ENRICHMENT`: data enrichment wrote to a record.
+          operationType:
+            type: string
+            enum: [CREATE, UPDATE, DELETE]
+            description: What happened to the changed resource.
+          objectType:
+            type: string
+            description: >-
+              The kind of resource that changed, for example `company`, `people`, `deals`, `task`,
+              `note`, `comment`, `attachment` (a file) or `interaction`. Older deal events may say `deal`.
+          objectUUID:
+            type: string
+            description: The id of the resource that changed. Not always the record you asked for (see the list description).
+          organizationUUID:
+            type: string
+            description: The workspace id.
+          actor:
+            type: object
+            description: Who made the change.
+            properties:
+              type:
+                type: string
+                enum: [USER, AGENT, SYSTEM]
+                description: "`USER`: a person or an API key. `AGENT`: a worker. `SYSTEM`: Heliyos itself, for example the inbox sync."
+              uuid:
+                type: string
+                description: >-
+                  For `USER`, the user id. For `AGENT`, the worker run id (older entries say `agent`).
+                  For `SYSTEM`, usually `system`.
+              name:
+                type: string
+                description: A display name, such as the person's name or the worker's name.
+      changeSummary:
+        type: string
+        description: A one-line, human-readable description of the change, written by Heliyos.
+      originalVersion:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: The resource before the change. Null or empty for a create.
+      updatedVersion:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: The resource after the change. Null for a delete.
+
+  TaskEvent:
+    type: object
+    description: >-
+      One change to a task. Snapshots are stored as they were at the time of the change, with
+      credential values (tokens, secrets, passwords, API keys) replaced by `[REDACTED]`.
+    additionalProperties: true
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      timestamp:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the change happened.
+      metadata:
+        type: object
+        additionalProperties: true
+        properties:
+          eventType:
+            type: string
+            description: >-
+              `AUDIT` on every task event: a person or worker created or changed the task. The
+              other event types (`INTERACTION`, `ENRICHMENT`) belong to records and do not appear here.
+            example: AUDIT
+          operationType:
+            type: string
+            enum: [CREATE, UPDATE, DELETE]
+            description: >-
+              `CREATE`: the task was created. `UPDATE`: the task changed. `DELETE` is recorded when a
+              task is deleted, but a deleted task's history can no longer be read here (the call answers 404).
+          objectType:
+            type: string
+            description: Always `task`.
+          objectUUID:
+            type: string
+            description: The task's id. Always the task you asked for.
+          organizationUUID:
+            type: string
+            description: The workspace id.
+          actor:
+            type: object
+            description: Who made the change.
+            properties:
+              type:
+                type: string
+                enum: [USER, AGENT, SYSTEM]
+                description: >-
+                  `USER`: a person, in the Heliyos app or through an API key. `AGENT`: a worker.
+                  `SYSTEM`: Heliyos itself. Task changes are almost always `USER` or `AGENT`.
+              uuid:
+                type: string
+                description: >-
+                  For `USER`, the user id (for an API key, the key owner's id). For `AGENT`, the worker
+                  run id; older entries say `agent`.
+              name:
+                type: string
+                description: >-
+                  A display name: the person's name, or the worker's name (`Heliyos` when Heliyos itself
+                  made the change during a run).
+      changeSummary:
+        type: string
+        description: >-
+          A one-line, human-readable description of the change, written by Heliyos shortly after the
+          change. Can be missing on very recent or older events.
+      originalVersion:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: >-
+          The task before the change: null or empty for a create. With `fields`, only the requested
+          fields are present.
+      updatedVersion:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: The task after the change. With `fields`, only the requested fields are present.
+
+operations:
+  listRecordEvents:
+    summary: List record events
+    description: |
+      Serves records only (companies, people, deals and custom objects). Heliyos looks the record up,
+      checks that you may view its object, and uses the record's own object type. For a task use
+      List task events.
+
+      Returns the change history of a company, person or deal, newest first: who created, changed
+      or deleted what, and when, with a one-line summary of each change and before and after
+      snapshots.
+
+      The list includes the record's own events and the events of anything linked to it: a task,
+      note, email thread, meeting, comment, file or other record whose `relationships` names this
+      record in either snapshot. Check `metadata.objectType` and `metadata.objectUUID` to tell them apart.
+
+      By default the list pages with a cursor: pass `limit`, then send `meta.pagination.next_cursor`
+      back as `cursor`. Sending `page` switches to page-number paging, where `meta.pagination` holds
+      `page`, `limit`, `total` and `hasMore`. See [Pagination](/api-reference/pagination).
+
+      Filters combine with AND. `eventType` and `operationType` match any of the values you send.
+    parameters:
+      id:
+        description: >-
+          The record's id: a company, person, deal or custom object record. Ids of tasks, notes and
+          interactions answer 404; for a task's history use List task events.
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+      limit:
+        description: Events per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. When you send both `cursor` and `page`, `cursor` wins.
+      page:
+        description: A page number, starting at 1, for page-number paging. Pages are `limit` events long.
+      objectType:
+        description: >-
+          Has no effect on records created in Heliyos: the record's own type is always used. Only
+          read for a record with no stored type. Leave it out.
+      eventType:
+        description: |
+          Only events of these types. Comma-separated, or repeat the parameter. Exact, case-sensitive values:
+          - `AUDIT`: changes made by people and workers.
+          - `INTERACTION`: email threads and meetings synced, updated or analysed.
+          - `ENRICHMENT`: data enrichment results.
+        example: AUDIT,ENRICHMENT
+      operationType:
+        description: "Only these operations: `CREATE`, `UPDATE`, `DELETE`. Comma-separated, or repeat the parameter."
+        example: UPDATE
+      startDate:
+        description: Only events at or after this time. An ISO 8601 date or date-time (a date alone means midnight UTC).
+        example: "2026-11-01T00:00:00.000Z"
+      endDate:
+        description: Only events at or before this time. An ISO 8601 date or date-time (a date alone means midnight UTC, so send the next day or a full time to include a whole day).
+        example: "2026-11-04T23:59:59.999Z"
+      actorId:
+        description: >-
+          Only events by this actor, matched exactly against `metadata.actor.uuid`: a user id for a
+          person's changes, a worker run id for a worker's, or `system`.
+        example: 66a0f1e2d3c4b5a697881111
+      search:
+        description: Only events whose change summary contains this text, case-insensitive. Up to 200 characters.
+        example: stage
+    response:
+      description: A page of events, newest first.
+      message: Events fetched successfully
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/RecordEvent" }
+      example:
+        - _id: 6728d2e4b2c3d4e5f6a7b8d0
+          timestamp: "2026-11-04T10:12:00.000Z"
+          metadata:
+            eventType: AUDIT
+            operationType: UPDATE
+            objectType: company
+            objectUUID: 66f1a8c3e4b0a1b2c3d4e5f6
+            organizationUUID: 66a0f1e2d3c4b5a697887766
+            actor: { type: USER, uuid: 66a0f1e2d3c4b5a697881111, name: Priya Patel }
+          changeSummary: Priya Patel changed the stage of Northwind Traders from Discovery to Proposal.
+          originalVersion: { data: { company_name: Northwind Traders, stage: Discovery } }
+          updatedVersion: { data: { company_name: Northwind Traders, stage: Proposal } }
+        - _id: 6728c9b0b2c3d4e5f6a7b8cf
+          timestamp: "2026-11-04T09:40:00.000Z"
+          metadata:
+            eventType: AUDIT
+            operationType: CREATE
+            objectType: task
+            objectUUID: 6728c9afb2c3d4e5f6a7b8ce
+            organizationUUID: 66a0f1e2d3c4b5a697887766
+            actor: { type: AGENT, uuid: 3f9a1c2b7d4e4f0a9b8c7d6e5f4a3b2c, name: Account Researcher }
+          changeSummary: Account Researcher created the task Send security questionnaire to Northwind Traders.
+          originalVersion: null
+          updatedVersion:
+            title: Send security questionnaire to Northwind Traders
+            status: backlog
+            relationships: [{ objectId: 66f1a8c3e4b0a1b2c3d4e5f6, objectType: company }]
+    errors:
+      "400": "VALIDATION_FAILED: a malformed query value or cursor."
+      "403": "FORBIDDEN_ACTION: you cannot view records of this object."
+      "404": "NOT_FOUND: no record with this id in the workspace, or the id belongs to a task, note or interaction."
+
+  listTaskEvents:
+    summary: List task events
+    description: |
+      Serves tasks only. The id must be a task's; any other id answers 404. For a company, person,
+      deal or custom object record use List record events.
+
+      Returns the change history of one task, newest first: who created or changed it, when, a
+      one-line summary of each change, and before and after snapshots of the task.
+
+      The two lists differ in scope. List record events folds in the events of everything linked to
+      the record (its tasks, notes, emails, meetings, comments and files). This list holds only the
+      task's own changes: a note or comment linked to the task does not appear here. The task's own
+      changes also show up in List record events of every record the task is linked to.
+
+      Changes made by people (in the app or through the API) and by workers are both recorded. An
+      event is written just after the change it describes, so a change you have just made can take a
+      moment to appear. A worker write that changes nothing a person would see (for example only its
+      own run bookkeeping) is not recorded.
+
+      This list has no filters: no event type, operation, date, actor or text search. Read the pages
+      and filter on `metadata.operationType` and `metadata.actor` yourself.
+
+      By default the list pages with a cursor: pass `limit`, then send `meta.pagination.next_cursor`
+      back as `cursor`. Sending `page` switches to page-number paging, where `meta.pagination` holds
+      only `page` and `limit` (no total and no `hasMore`): a page shorter than `limit` is the last
+      one. See [Pagination](/api-reference/pagination).
+
+      Task snapshots can be large. Send `fields` to get back only the parts of each snapshot you read.
+    parameters:
+      id:
+        description: >-
+          The task's id. Ids of companies, people, deals, custom object records, notes and
+          interactions answer 404; for a record's history use List record events.
+        example: 6728c9afb2c3d4e5f6a7b8ce
+      limit:
+        description: Events per page, 1 to 100. Defaults to 20.
+        example: 20
+      cursor:
+        description: The `next_cursor` from the previous page. When you send both `cursor` and `page`, `cursor` wins.
+      page:
+        description: A page number, starting at 1, for page-number paging. Pages are `limit` events long.
+      fields:
+        description: >-
+          Only these fields of `originalVersion` and `updatedVersion`, comma-separated, for example
+          `title,status,relationships.objectId`. Up to 30 field paths, each one to three dot-separated
+          names of letters, digits and `_` (starting with a letter or `_`, up to 64 characters each).
+          `_id`, `timestamp`, `metadata` and `changeSummary` are always returned. Leave it out for
+          whole snapshots.
+        example: title,status,dueDate
+    response:
+      description: A page of the task's events, newest first.
+      message: Task events fetched successfully
+      pagination: keyset
+      data:
+        type: array
+        items: { $ref: "#/components/schemas/TaskEvent" }
+      example:
+        - _id: 6728e1a0b2c3d4e5f6a7b8e2
+          timestamp: "2026-11-04T15:20:00.000Z"
+          metadata:
+            eventType: AUDIT
+            operationType: UPDATE
+            objectType: task
+            objectUUID: 6728c9afb2c3d4e5f6a7b8ce
+            organizationUUID: 66a0f1e2d3c4b5a697887766
+            actor: { type: USER, uuid: 66a0f1e2d3c4b5a697881111, name: Priya Patel }
+          changeSummary: Priya Patel moved Send security questionnaire to Northwind Traders from Backlog to In progress.
+          originalVersion: { title: Send security questionnaire to Northwind Traders, status: backlog, dueDate: "2026-11-08T00:00:00.000Z" }
+          updatedVersion: { title: Send security questionnaire to Northwind Traders, status: in_progress, dueDate: "2026-11-08T00:00:00.000Z" }
+        - _id: 6728c9b0b2c3d4e5f6a7b8cf
+          timestamp: "2026-11-04T09:40:00.000Z"
+          metadata:
+            eventType: AUDIT
+            operationType: CREATE
+            objectType: task
+            objectUUID: 6728c9afb2c3d4e5f6a7b8ce
+            organizationUUID: 66a0f1e2d3c4b5a697887766
+            actor: { type: AGENT, uuid: 3f9a1c2b7d4e4f0a9b8c7d6e5f4a3b2c, name: Account researcher }
+          changeSummary: Account researcher created the task Send security questionnaire to Northwind Traders.
+          originalVersion: null
+          updatedVersion: { title: Send security questionnaire to Northwind Traders, status: backlog, dueDate: "2026-11-08T00:00:00.000Z" }
+    errors:
+      "400": "VALIDATION_FAILED: a malformed query value or cursor, or a `fields` value that is not up to 30 comma-separated field paths."
+      "403": "FORBIDDEN_ACTION: you cannot view tasks."
+      "404": "NOT_FOUND: no task with this id in the workspace (including a task that was deleted), or the id belongs to a record, note or interaction."

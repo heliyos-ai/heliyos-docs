@@ -1,0 +1,182 @@
+tag:
+  name: Notification settings
+  icon: /icons/app-preferences.svg
+  order: 140
+  description: >-
+    Which workspace events send notification emails, how often, and to whom. There is one settings
+    document per workspace, shared by everyone in it.
+
+components:
+  NotificationEventType:
+    type: object
+    required: [type, frequency]
+    properties:
+      type:
+        type: string
+        enum:
+          - task.created
+          - task.updated
+          - deal.created
+          - deal.updated
+          - deal.approval
+          - leadset.created
+          - leadset.records.available
+          - organization.daily_summary
+          - scout.signal_detected
+          - integration.not_synced
+        description: |
+          The event that notifies:
+          - `task.created`: a task was created.
+          - `task.updated`: a task changed.
+          - `deal.created`: a deal was created.
+          - `deal.updated`: a deal changed.
+          - `deal.approval`: a deal change is waiting for review.
+          - `leadset.created`: a lead set was created.
+          - `leadset.records.available`: new records are ready in a lead set.
+          - `organization.daily_summary`: the workspace's daily briefing email. Sent only when its
+            frequency is `daily`.
+          - `scout.signal_detected`: a Scout found a signal. Always sent at once: a `daily` frequency
+            is saved as `immediate`.
+          - `integration.not_synced`: a connected integration stopped syncing. Always sent, even when
+            notifications are off or this event is not in the list (see `notifyEmails`).
+      frequency:
+        type: string
+        enum: [immediate, daily]
+        description: |
+          - `immediate`: one email per event, sent when it happens.
+          - `daily`: collected and sent together in the daily digest.
+
+  NotificationSettings:
+    type: object
+    properties:
+      id:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The settings document's id.
+      organizationId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The workspace the settings belong to.
+      notifyEmails:
+        type: array
+        description: >-
+          Every address notification emails go to. Notifications are sent only when this list has at
+          least one address, with one exception: an `integration.not_synced` email goes to the person
+          whose integration failed when the list is empty.
+        items: { type: string, format: email }
+      eventTypes:
+        type: array
+        description: The events that send notifications, each with its frequency. An event not listed sends nothing.
+        items: { $ref: "#/components/schemas/NotificationEventType" }
+      isActive:
+        type: boolean
+        description: >-
+          The master switch. `false` stops every notification email except `integration.not_synced`.
+          Events already collected for the daily digest are discarded if it is `false` when the digest
+          goes out.
+      metadata: { $ref: "#/components/schemas/AuditMetadata" }
+
+operations:
+  getNotificationSettings:
+    summary: Get notification settings
+    description: |
+      Returns the workspace's notification settings: whether notifications are on, who receives them,
+      and which events notify and how often.
+
+      These are workspace settings, not settings of the person who owns the API key. Everyone in the
+      workspace reads and edits the same document.
+
+      A workspace that has never saved settings has none: the response then has `data: {}` and
+      `meta.message` "No notification settings found.", and no notification emails are sent (except
+      `integration.not_synced`).
+    response:
+      description: >-
+        The settings, or an empty object when the workspace has never saved any. The message is
+        "Notification settings fetched successfully." when settings exist and "No notification
+        settings found." when they do not.
+      message: Notification settings fetched successfully.
+      data:
+        allOf: [{ $ref: "#/components/schemas/NotificationSettings" }]
+        description: The settings. An empty object when none were ever saved.
+      example:
+        id: 6721a9e0c4b5d6e7f8a9b0c1
+        organizationId: 66a0f1e2d3c4b5a697887766
+        notifyEmails: [ana.lopez@example.com, revops@example.com]
+        eventTypes:
+          - { type: deal.approval, frequency: immediate }
+          - { type: task.created, frequency: daily }
+          - { type: organization.daily_summary, frequency: daily }
+        isActive: true
+        metadata:
+          created: { at: "2026-10-02T08:15:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-04T09:30:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+
+  updateNotificationSettings:
+    summary: Update notification settings
+    description: |
+      Changes the workspace's notification settings, creating them the first time. Send at least one
+      field. Each field you send replaces that setting completely; fields you leave out are kept.
+
+      - `eventTypes` is the full list of notifying events. To add one event, read the current list,
+        add to it and send the whole list back.
+      - `notifyEmails` is the full recipient list. Changing who receives notifications needs an owner
+        or admin (an API key counts as an admin). Sending the stored list back unchanged is allowed for
+        anyone who can edit the settings. A list can grow to at most 10 addresses.
+      - The first save of a workspace that had no settings starts from notifications on, no
+        recipients and no events, then applies what you sent.
+    requestBody:
+      schema:
+        type: object
+        minProperties: 1
+        properties:
+          notifyEmails:
+            type: array
+            description: >-
+              The complete new recipient list. Replaces the current one. Each item must be a valid
+              email address (surrounding spaces are trimmed). At most 10 addresses when you add any.
+              Send `[]` to remove every recipient, which stops notifications.
+            items: { type: string, format: email }
+            example: [ana.lopez@example.com, revops@example.com]
+          eventTypes:
+            type: array
+            description: >-
+              The complete new list of notifying events, each `{ type, frequency }`. Replaces the
+              current list. Send `[]` to turn off every event.
+            items: { $ref: "#/components/schemas/NotificationEventType" }
+          isActive:
+            type: boolean
+            description: Turns every notification email on (`true`) or off (`false`).
+            example: true
+      examples:
+        addEvent:
+          summary: Turn on approval emails and a daily task digest
+          value:
+            eventTypes:
+              - { type: deal.approval, frequency: immediate }
+              - { type: task.created, frequency: daily }
+              - { type: organization.daily_summary, frequency: daily }
+        pause:
+          summary: Pause all notification emails
+          value: { isActive: false }
+    response:
+      description: The saved settings.
+      message: Notification settings saved successfully.
+      data: { $ref: "#/components/schemas/NotificationSettings" }
+      example:
+        id: 6721a9e0c4b5d6e7f8a9b0c1
+        organizationId: 66a0f1e2d3c4b5a697887766
+        notifyEmails: [ana.lopez@example.com, revops@example.com]
+        eventTypes:
+          - { type: deal.approval, frequency: immediate }
+          - { type: task.created, frequency: daily }
+          - { type: organization.daily_summary, frequency: daily }
+        isActive: true
+        metadata:
+          created: { at: "2026-10-02T08:15:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+          updated: { at: "2026-11-05T11:02:00.000Z", by: 66a0f1e2d3c4b5a697881111 }
+    errors:
+      "400": "VALIDATION_FAILED: an empty body, an unknown event type or frequency, an invalid email address, or a recipient list that grows past 10 addresses."
+      "403": "FORBIDDEN_ACTION: notifyEmails changed by a member who is not an owner or admin. Nothing is written."
+    content: |
+      <Note>
+      Notification emails can contain record names and summaries. Only add addresses that should see
+      that information.
+      </Note>

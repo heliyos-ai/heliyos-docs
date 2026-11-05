@@ -1,0 +1,102 @@
+tag:
+  name: Timeline
+  icon: /icons/app-history.svg
+  order: 40
+  description: >-
+    The AI-written timeline of a company, person or deal: summary entries Heliyos writes on a schedule.
+    For the exact change history see Activities, and for emails and meetings see Interactions.
+
+components:
+  TimelineEntry:
+    type: object
+    description: >-
+      One AI-written timeline entry. Heliyos writes entries on a schedule: each run reads the
+      latest emails, meetings, tasks and changes around a company and writes one summary for the
+      company and for each related person and deal that had activity.
+    properties:
+      _id: { $ref: "#/components/schemas/ObjectId" }
+      timestamp:
+        allOf: [{ $ref: "#/components/schemas/Timestamp" }]
+        description: When the entry was written.
+      metadata:
+        type: object
+        properties:
+          objectId:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: The record the entry is about.
+          organizationId:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: The workspace.
+          baseSchemaId:
+            type: string
+            nullable: true
+            description: The record's object (base schema) id. Null when it was not known at write time.
+          relationshipObjectType:
+            type: string
+            enum: [company, people, deals]
+            description: The kind of record the entry is about.
+          summary:
+            type: string
+            description: The entry text, in markdown. What happened in the period it covers.
+
+operations:
+  listRecordTimeline:
+    summary: List timeline entries
+    description: |
+      Returns the AI-written timeline of a company, person or deal, newest first, together with the
+      record's current relationship summary.
+
+      Entries are written on a schedule, not on every change. A record with no recent activity can
+      have no entries. For the exact change history use List record events, and for the emails and meetings themselves use List interactions with `filters.objectId`.
+
+      This list pages by page number only: send `page` and `limit`. `meta.pagination` holds `total`,
+      `page`, `limit` and `hasMore`. The relationship summary is also repeated in `meta.summary`.
+    parameters:
+      id:
+        description: The record's id (a company, person or deal).
+        example: 66f1a8c3e4b0a1b2c3d4e5f6
+      limit:
+        description: Entries per page, 1 to 100. Defaults to 20.
+        example: 20
+      page:
+        description: The page number, starting at 1. Defaults to 1.
+        example: 1
+    response:
+      description: The record's relationship summary and a page of timeline entries.
+      message: Timeline events fetched successfully
+      pagination: offset
+      paginationExample: { total: 2, page: 1, limit: 20, hasMore: false }
+      data:
+        type: object
+        properties:
+          summary:
+            type: string
+            description: >-
+              The record's current relationship summary, kept up to date by workers. An empty string
+              when the record has none yet.
+          events:
+            type: array
+            description: Timeline entries, newest first.
+            items: { $ref: "#/components/schemas/TimelineEntry" }
+      example:
+        summary: Northwind Traders is evaluating the Growth plan. Procurement asked for a security review before signing.
+        events:
+          - _id: 6728c0a1b2c3d4e5f6a7b8c9
+            timestamp: "2026-11-04T06:00:00.000Z"
+            metadata:
+              objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+              organizationId: 66a0f1e2d3c4b5a697887766
+              baseSchemaId: 66a0f1e2d3c4b5a697880001
+              relationshipObjectType: company
+              summary: Ana Silva confirmed budget for Q1 on a pricing call and asked for the security questionnaire by Friday.
+          - _id: 6727a3f0b2c3d4e5f6a7b8c1
+            timestamp: "2026-11-03T06:00:00.000Z"
+            metadata:
+              objectId: 66f1a8c3e4b0a1b2c3d4e5f6
+              organizationId: 66a0f1e2d3c4b5a697887766
+              baseSchemaId: 66a0f1e2d3c4b5a697880001
+              relationshipObjectType: company
+              summary: Sent the proposal to the buying committee. No reply yet.
+    errors:
+      "403": "FORBIDDEN_ACTION: you cannot view records of this object."
+      "404": "NOT_FOUND: the record, or its object, is not in the workspace."

@@ -1,0 +1,63 @@
+---
+title: "Filtering and sorting"
+description: "The filters JSON object that list endpoints accept: search, conditions and sort."
+---
+
+Most list endpoints take a `filters` query parameter. Its value is a JSON object, URL-encoded into the query string.
+
+```bash
+curl -G "https://api-prod.heliyos.ai/v1/platform/notes" \
+  -H "Authorization: Bearer $HELIYOS_API_KEY" \
+  --data-urlencode 'filters={
+    "search": "renewal",
+    "sort": [
+      {
+        "field": "metadata.updated.at",
+        "direction": "desc"
+      }
+    ]
+  }'
+```
+
+`curl -G --data-urlencode` does the encoding for you. In code, `JSON.stringify` the object and pass it as a query parameter; your HTTP client encodes it.
+
+## Keys
+
+| Key | Type | What it does |
+| --- | --- | --- |
+| `search` | string | Free-text match, case-insensitive. Plain words work best: symbols such as `+ ( ) [ ] * ?` can be rejected. |
+| `filters` | array | Conditions, each `{ "field", "operator", "value" }`. |
+| `sort` | array | Each `{ "field", "direction" }`, direction `asc` or `desc`. Switches the list to [page numbers](/api-reference/pagination#page-number-paging). |
+| `page`, `pageSize` | integer | Page-number paging inside `filters`. `pageSize` above an endpoint's cap is lowered to the cap. |
+
+Endpoints add their own keys, such as `relatedObjectId` on notes and tasks to keep only items linked to one record. Each endpoint's `filters` parameter lists the fields and operators it supports. Operator names differ between some endpoints, so check the page for the endpoint you call.
+
+## Conditions
+
+```json
+{
+  "filters": [
+    {
+      "field": "stage",
+      "operator": "equals",
+      "value": "Won"
+    },
+    {
+      "field": "createdAt",
+      "operator": "after",
+      "value": "2026-10-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+- Text operators match case-insensitively.
+- Dates are ISO 8601. `equals` on a date matches the whole day.
+- Emptiness operators (`empty` and `not_empty` on most lists, `empty` and `notEmpty` on records) take no `value`.
+- How conditions combine differs by endpoint: most require every condition, some accept a `conjunction` per condition. The endpoint page says which.
+
+## Safety limits
+
+- `filters` is at most 20,000 characters.
+- Field names and values may not contain database operators. Keys starting with `$` are rejected with `400 VALIDATION_FAILED`.
+- A malformed JSON value is rejected with `400 VALIDATION_FAILED` and the message `filters must be a JSON object`.

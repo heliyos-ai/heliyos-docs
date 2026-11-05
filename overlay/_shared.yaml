@@ -1,0 +1,89 @@
+components:
+  ObjectId:
+    type: string
+    pattern: "^[0-9a-fA-F]{24}$"
+    description: A 24-character hexadecimal id.
+    example: 66f1a8c3e4b0a1b2c3d4e5f6
+
+  Timestamp:
+    type: string
+    format: date-time
+    description: An ISO 8601 date-time in UTC.
+    example: "2026-11-04T09:30:00.000Z"
+
+  AuditMetadata:
+    type: object
+    description: Who created and last changed the resource, and when.
+    properties:
+      created:
+        type: object
+        properties:
+          at: { $ref: "#/components/schemas/Timestamp" }
+          by:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: Id of the user (or the API key's owner) who created it.
+      updated:
+        type: object
+        properties:
+          at: { $ref: "#/components/schemas/Timestamp" }
+          by:
+            allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+            description: Id of the user who last changed it.
+
+  RelationshipInput:
+    type: object
+    description: >-
+      A link from this resource to a record (company, person, deal or custom object) or to a
+      task or interaction in the same workspace.
+    required: [objectId]
+    properties:
+      objectId:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: Id of the linked record, task or interaction.
+      schemaId:
+        type: string
+        nullable: true
+        description: >-
+          Id of the linked record's object (its base schema). Recommended for records, so the
+          link renders with the right object. Omit or send null for tasks and interactions.
+      objectType:
+        type: string
+        nullable: true
+        description: >-
+          What the link points at: `company`, `people`, `deals` or a custom object's type for
+          records, `task` for a task, `interaction` or `meeting` for an email thread or meeting.
+        example: company
+
+  Relationship:
+    type: object
+    description: A linked resource, hydrated with a short summary so it can be shown without another call.
+    properties:
+      objectId: { $ref: "#/components/schemas/ObjectId" }
+      schemaId:
+        type: string
+        nullable: true
+        description: The linked record's object id, when the link points at a record.
+      objectType:
+        type: string
+        nullable: true
+        description: "`company`, `people`, `deals`, a custom object type, `task`, `interaction` or `meeting`."
+      data:
+        type: object
+        additionalProperties: true
+        description: >-
+          A summary of the linked resource. For a record, its field values (for example
+          `company_name` and `logo`, or `people_name`). For a task, `title` and `status`.
+          For an interaction, `subject` and `channelType`. Empty when the target no longer exists.
+      schema:
+        type: object
+        nullable: true
+        additionalProperties: true
+        description: The linked record's object (`_id`, `name`, `objectType`, `fields`). Present on single-resource reads.
+
+  ListFilters:
+    type: string
+    description: >-
+      A JSON-encoded object, URL-encoded into the query string. See
+      [Filtering and sorting](/api-reference/filtering). Keys: `search` (text),
+      `filters` (array of `{ field, operator, value }`), `sort` (array of `{ field, direction }`),
+      `page` and `pageSize` (page-number paging, `pageSize` at most 200).
