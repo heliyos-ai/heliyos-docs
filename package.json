@@ -20,7 +20,9 @@
     "predev": "node scripts/require-node.mjs",
     "build:llms": "node scripts/build-llms.mjs",
     "check:docs": "node scripts/build-llms.mjs --check && node scripts/check-content.mjs && mint broken-links",
-    "precheck:docs": "node scripts/require-node.mjs"
+    "precheck:docs": "node scripts/require-node.mjs",
+    "indexnow": "node scripts/indexnow.mjs",
+    "preindexnow": "node scripts/require-node.mjs"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "^10.1.1",
