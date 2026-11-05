@@ -5,10 +5,8 @@
  */
 @font-face { font-family: "Gambetta"; src: url("/fonts/Gambetta-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: "Gambetta"; src: url("/fonts/Gambetta-Italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
-@font-face { font-family: "Geist"; src: url("/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "Geist"; src: url("/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
-@font-face { font-family: "Geist"; src: url("/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Geist"; src: url("/fonts/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 
 /* ------------------------------------------------------------------ tokens */
 :root {
@@ -201,6 +199,8 @@ html.dark .callout code { background: rgba(0,0,0,.25) !important; }
 }
 #navbar ul > li:not(.navbar-link) > a * { color: inherit !important; }
 html.dark #navbar ul > li:not(.navbar-link) > a { background: var(--hy-sun); color: var(--hy-ink) !important; border-color: var(--hy-sun-deep); }
+/* The theme paints the button with an inner layer; let the link's own background show through. */
+#navbar ul > li:not(.navbar-link) > a > span[class*="absolute"] { background: transparent !important; }
 
 /* Focus: 2px ring with an offset. Graphite on light, linen on dark. Never sun, never blue. */
 a:focus-visible, button:focus-visible, [role="tab"]:focus-visible {
@@ -253,24 +253,6 @@ html.dark .steps [class*="border-l"], html.dark .steps [class*="w-px"] { border-
 /* Pages in a group sit indented under the group heading (past its icon), in every tab. */
 #sidebar-content ul.sidebar-group > li > a { margin-left: 22px; }
 #sidebar-content .sidebar-group-header { color: var(--hy-text) !important; font-weight: 600; }
-
-/*
- * The sidebar stays put: pinned under the navbar with its own scroll, so the full-width footer
- * never drags it up. Only the page in the middle scrolls. The content and footer leave room for it.
- */
-@media (min-width: 1024px) {
-  #sidebar-content {
-    position: fixed !important;
-    left: 0;
-    top: calc(var(--mintlify-slot-header-height, 7rem) + var(--banner-height, 0px)) !important;
-    height: calc(100vh - var(--mintlify-slot-header-height, 7rem) - var(--banner-height, 0px)) !important;
-    width: var(--sidebar-width, 19rem);
-    z-index: 20;
-    background: var(--hy-canvas);
-  }
-  div:has(> #sidebar-content) { padding-left: var(--sidebar-width, 19rem); }
-  footer.advanced-footer, .advanced-footer { padding-left: var(--sidebar-width, 19rem); }
-}
 
 /* ------------------------------------------------------------------ MCP install picker */
 .hy-picker { margin: 24px 0; border: 1px solid var(--hy-line); border-radius: 16px; background: var(--hy-surface); overflow: hidden; }
@@ -325,27 +307,6 @@ html.dark .hy-picker-tab.is-active { background: rgba(255,208,55,0.12); }
   .hy-picker-tab:last-child:nth-child(4n + 3) { grid-column: auto; }
 }
 
-/* ------------------------------------------------------------------ theme switch, top right */
-@media (min-width: 1024px) {
-  #sidebar-content div:has(> div > button[aria-label="Switch to dark theme"]) {
-    position: fixed;
-    top: 12px;
-    right: 20px;
-    width: auto;
-    padding: 0;
-    border: 0;
-    z-index: 60;
-  }
-  #sidebar-content div:has(> button[aria-label="Switch to dark theme"]) {
-    height: 32px;
-    background: var(--hy-surface);
-    border-color: var(--hy-line) !important;
-  }
-  /* Leave room for it after the navbar links and the Open Heliyos button. */
-  
-}
-/* The theme switch lives inside the sidebar, so the sidebar must stack above the navbar for it to show. */
-@media (min-width: 1024px) { #sidebar-content { z-index: 40 !important; } }
 .hy-picker-name { white-space: normal; font-size: 13.5px; line-height: 1.25; }
 
 /* Picker header: a line of context and the link to every install option. */
@@ -379,7 +340,3 @@ html.dark .hy-client-head { background: rgba(255,208,55,0.10); }
 #navbar ul:has(> li.navbar-link) > li:not(.navbar-link) { order: -1; margin-right: 12px !important; }
 #navbar li.navbar-link > a { padding: 6px !important; }
 #navbar li.navbar-link > a svg { width: 22px !important; height: 22px !important; }
-@media (min-width: 1024px) {
-  /* Room for the theme switch pinned at the far right. */
-  #navbar ul:has(> li.navbar-link) { margin-right: 64px; }
-}

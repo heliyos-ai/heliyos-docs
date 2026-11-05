@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "palm",
+  "theme": "mint",
   "name": "Heliyos",
   "description": "Developer docs for Heliyos, the AI operating system for revenue. Build on its unified customer memory and AI workers with the REST API and the MCP server.",
   "colors": {
@@ -26,19 +26,16 @@
   },
   "fonts": {
     "family": "Geist",
-    "weight": 400,
-    "source": "/fonts/Geist-Regular.woff2",
+    "source": "/fonts/Geist-Variable.woff2",
     "format": "woff2",
     "heading": {
       "family": "Geist",
-      "weight": 600,
-      "source": "/fonts/Geist-SemiBold.woff2",
+      "source": "/fonts/Geist-Variable.woff2",
       "format": "woff2"
     },
     "body": {
       "family": "Geist",
-      "weight": 400,
-      "source": "/fonts/Geist-Regular.woff2",
+      "source": "/fonts/Geist-Variable.woff2",
       "format": "woff2"
     }
   },
