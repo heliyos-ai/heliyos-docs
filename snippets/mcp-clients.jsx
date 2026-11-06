@@ -15,9 +15,13 @@ export const MCP_CLIENTS = [
       logo: "/logos/claude.svg",
       steps: [
         {
-          title: "Install the Heliyos plugin",
-          text: "It asks for your API key, keeps it in your system's secure credential store, and adds a skill that teaches Claude when to use which tool.",
-          code: "claude plugin marketplace add heliyos-ai/heliyos-mcp\nclaude plugin install heliyos@heliyos",
+          title: "Install the Heliyos plugin with your key",
+          text: "Replace YOUR_HELIYOS_API_KEY with your key. It goes into your system's secure credential store, never into a file, and the plugin adds a skill that teaches Claude when to use which tool.",
+          code: "claude plugin marketplace add heliyos-ai/heliyos-mcp\nclaude plugin install heliyos@heliyos --config api_key=YOUR_HELIYOS_API_KEY",
+        },
+        {
+          title: "Installed without the key?",
+          text: "The server stays off until the key is set. Inside Claude Code run /plugin configure heliyos@heliyos and enter it, then restart Claude Code if /mcp does not list heliyos yet.",
         },
         {
           title: "Or add only the MCP server",
