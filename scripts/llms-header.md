@@ -1,6 +1,6 @@
 # Heliyos developer docs
 
-> Developer docs for Heliyos, the AI operating system for revenue. The Heliyos REST API and the Heliyos MCP server (`@heliyos/mcp`) let your systems and AI agents read and change a workspace's customer memory, records, notes, tasks, Scouts, knowledge base and files, start AI workers, and list and decide the reviews waiting on your team.
+> Developer docs for Heliyos, the AI operating system for revenue. The Heliyos REST API and the Heliyos MCP server (`@heliyos/heliyos-mcp`) let your systems and AI agents read and change a workspace's customer memory, records, notes, tasks, Scouts, knowledge base and files, start AI workers, and list and decide the reviews waiting on your team.
 
 ## About Heliyos
 
@@ -16,12 +16,12 @@ Heliyos is the AI operating system for revenue: one self-updating unified memory
 
 ## API and MCP facts
 
-- Versions: Heliyos REST API v1.0.0 (every path starts with `/v1/`) and `@heliyos/mcp` v1.0.0.
+- Versions: Heliyos REST API v1.0.0 (every path starts with `/v1/`) and `@heliyos/heliyos-mcp` v1.0.0.
 - REST API base URL: `https://api-prod.heliyos.ai`. JSON over HTTPS.
 - Authentication: `Authorization: Bearer <key>` with a workspace API key (starts with `heliyos_`), created by a workspace admin in Settings → API keys. A key acts as an admin of one workspace and sees only that workspace.
 - Responses: `{ "meta": { "message" }, "data": ... }`. Errors: `{ "message", "error": { "code", "message", "details" } }` with codes `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN_ACTION`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `INTERNAL`.
 - Lists page with a cursor (`limit` 1 to 100, default 20, then `cursor` = `meta.pagination.next_cursor`). Rate limit: 60 requests per minute per key.
-- MCP server: `npx -y @heliyos/mcp` with `HELIYOS_API_KEY` set. It runs locally over stdio and works with Claude Code, Codex, Cursor, VS Code, Claude Desktop, Antigravity and any MCP client. Every tool calls an endpoint documented here.
+- MCP server: `npx -y @heliyos/heliyos-mcp` with `HELIYOS_API_KEY` set. It runs locally over stdio and works with Claude Code, Codex, Cursor, VS Code, Claude Desktop, Antigravity and any MCP client. Every tool calls an endpoint documented here.
 
 ## How to read these docs
 

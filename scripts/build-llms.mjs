@@ -82,7 +82,7 @@ for (const tab of docs.navigation.tabs) {
   }
 }
 
-const out = `${facts}\n\n${sections.join("\n\n")}\n\n## Optional\n\n- [Full text of every page](${SITE}/llms-full.txt): every page of these docs in one Markdown file.\n- [Heliyos website summary](https://www.heliyos.ai/llms.txt): the product, its features, integrations, pricing and comparisons.\n- [MCP server on npm](https://www.npmjs.com/package/@heliyos/mcp): the \`@heliyos/mcp\` package.\n- [MCP server source](https://github.com/heliyos-ai/heliyos-mcp): the MCP server's code and README.\n`;
+const out = `${facts}\n\n${sections.join("\n\n")}\n\n## Optional\n\n- [Full text of every page](${SITE}/llms-full.txt): every page of these docs in one Markdown file.\n- [Heliyos website summary](https://www.heliyos.ai/llms.txt): the product, its features, integrations, pricing and comparisons.\n- [MCP server on npm](https://www.npmjs.com/package/@heliyos/heliyos-mcp): the \`@heliyos/heliyos-mcp\` package.\n- [MCP server source](https://github.com/heliyos-ai/heliyos-mcp): the MCP server's code and README.\n`;
 
 if (errors.length) {
   console.error(`build-llms: ${errors.length} problem(s):\n  - ${errors.join("\n  - ")}`);

@@ -24,7 +24,7 @@
 
 <p align="center">
   <a href="https://docs.heliyos.ai"><img alt="Docs" src="https://img.shields.io/badge/docs-docs.heliyos.ai-27251E?style=flat-square"></a>
-  <a href="https://www.npmjs.com/package/@heliyos/mcp"><img alt="npm" src="https://img.shields.io/npm/v/@heliyos/mcp?style=flat-square&label=%40heliyos%2Fmcp&color=EBB427"></a>
+  <a href="https://www.npmjs.com/package/@heliyos/heliyos-mcp"><img alt="npm" src="https://img.shields.io/npm/v/@heliyos/heliyos-mcp?style=flat-square&label=%40heliyos%2Fmcp&color=EBB427"></a>
   <a href="https://docs.heliyos.ai/llms.txt"><img alt="llms.txt" src="https://img.shields.io/badge/llms.txt-available-27251E?style=flat-square"></a>
   <a href="https://mintlify.com"><img alt="Built with Mintlify" src="https://img.shields.io/badge/built%20with-Mintlify-27251E?style=flat-square"></a>
 </p>
@@ -58,7 +58,7 @@ curl https://api-prod.heliyos.ai/v1/platform/organization \
 Or give Claude Code the MCP server:
 
 ```sh
-claude mcp add --transport stdio --env HELIYOS_API_KEY=$HELIYOS_API_KEY --scope user heliyos -- npx -y @heliyos/mcp
+claude mcp add --transport stdio --env HELIYOS_API_KEY=$HELIYOS_API_KEY --scope user heliyos -- npx -y @heliyos/heliyos-mcp
 ```
 
 See the [Quickstart](https://docs.heliyos.ai/quickstart) and [Install](https://docs.heliyos.ai/mcp/install) for every client.

@@ -74,7 +74,7 @@ Each capability below says what it does in the Heliyos app and what you can reac
 ```text
 Your code ──HTTPS + API key──► api-prod.heliyos.ai ──► your workspace
                                     ▲               (records, notes, tasks,
-AI agent ──MCP (stdio)──► @heliyos/mcp               Scouts, workers, review)
+AI agent ──MCP (stdio)──► @heliyos/heliyos-mcp               Scouts, workers, review)
 ```
 
 - **One workspace per key.** A key reads and writes only the workspace it was created in.
@@ -91,7 +91,7 @@ AI agent ──MCP (stdio)──► @heliyos/mcp               Scouts, workers, 
     Yes. The Heliyos REST API is at `https://api-prod.heliyos.ai`. It takes and returns JSON, authenticates with a workspace API key, and covers records, objects and fields, timeline, activities, interactions, notes, tasks, workers and runs, reviews, Scouts, signals, the watchlist, the knowledge base, files, labels, team and notification settings. Start with the [Quickstart](/quickstart).
   </Accordion>
   <Accordion title="Does Heliyos have an MCP server?">
-    Yes. `@heliyos/mcp` is an open-source Model Context Protocol server with 73 tools. It runs on your machine with `npx -y @heliyos/mcp` and works with Claude Code, Codex, Cursor, VS Code, Claude Desktop, Antigravity and any other MCP client. See [Install](/mcp/install).
+    Yes. `@heliyos/heliyos-mcp` is an open-source Model Context Protocol server with 73 tools. It runs on your machine with `npx -y @heliyos/heliyos-mcp` and works with Claude Code, Codex, Cursor, VS Code, Claude Desktop, Antigravity and any other MCP client. See [Install](/mcp/install).
   </Accordion>
   <Accordion title="How do I get an API key?">
     A workspace admin creates one in **Settings → API keys** in Heliyos. The key is shown once, acts as an admin of that one workspace, and stops working when it is revoked or expires. See [Authentication](/authentication).

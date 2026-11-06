@@ -5,7 +5,7 @@ description: "Give Claude, Cursor, Codex, VS Code and other AI agents safe, scop
 keywords: ["Heliyos MCP server", "Model Context Protocol", "MCP server for CRM", "MCP server for sales", "AI agent tools"]
 ---
 
-`@heliyos/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server. It runs on your machine, talks to your AI client over stdio, and calls the Heliyos API with your workspace API key.
+`@heliyos/heliyos-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server. It runs on your machine, talks to your AI client over stdio, and calls the Heliyos API with your workspace API key.
 
 With it, an agent can:
 
@@ -26,8 +26,8 @@ Important actions that workers take still wait for review in Heliyos, so your te
   <Card title="All tools" icon="/icons/layers.svg" href="/mcp/tools/index">
     73 tools, grouped by resource, with every input documented.
   </Card>
-  <Card title="MCP server on npm" icon="/icons/code.svg" href="https://www.npmjs.com/package/@heliyos/mcp">
-    The `@heliyos/mcp` package, its versions and its README.
+  <Card title="MCP server on npm" icon="/icons/code.svg" href="https://www.npmjs.com/package/@heliyos/heliyos-mcp">
+    The `@heliyos/heliyos-mcp` package, its versions and its README.
   </Card>
 </CardGroup>
 
@@ -37,7 +37,7 @@ Important actions that workers take still wait for review in Heliyos, so your te
 AI client (Claude, Cursor, Codex, VS Code ...)
    │  stdio (JSON-RPC)
    ▼
-@heliyos/mcp   runs on your machine, holds HELIYOS_API_KEY
+@heliyos/heliyos-mcp   runs on your machine, holds HELIYOS_API_KEY
    │  HTTPS, Authorization: Bearer heliyos_...
    ▼
 api-prod.heliyos.ai  ──► your workspace
