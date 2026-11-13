@@ -19,16 +19,20 @@ components:
       billingStatus:
         type: string
         nullable: true
-        enum: [active, trialing, past_due, canceled, incomplete, incomplete_expired, pending_payment]
+        enum: [active, trialing, past_due, paused, canceled, incomplete, incomplete_expired, pending_payment]
         description: |
           The subscription's billing state:
           - `active`: paid and current.
           - `trialing`: in a free trial.
           - `past_due`: a payment failed and is being retried.
+          - `paused`: the subscription is paused. It resumes from the customer portal.
           - `canceled`: the subscription ended.
           - `incomplete`: the first payment has not gone through yet.
           - `incomplete_expired`: the first payment never went through and the attempt expired.
           - `pending_payment`: waiting for a payment to complete.
+
+          While the state is `paused`, `canceled` or `incomplete_expired`, requests that change data answer
+          `403 FORBIDDEN_ACTION`. Reads keep working.
 
           `null` when the workspace has no billing state recorded.
       plan:

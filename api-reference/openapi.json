@@ -15915,12 +15915,13 @@
               "active",
               "trialing",
               "past_due",
+              "paused",
               "canceled",
               "incomplete",
               "incomplete_expired",
               "pending_payment"
             ],
-            "description": "The subscription's billing state:\n- `active`: paid and current.\n- `trialing`: in a free trial.\n- `past_due`: a payment failed and is being retried.\n- `canceled`: the subscription ended.\n- `incomplete`: the first payment has not gone through yet.\n- `incomplete_expired`: the first payment never went through and the attempt expired.\n- `pending_payment`: waiting for a payment to complete.\n\n`null` when the workspace has no billing state recorded.\n"
+            "description": "The subscription's billing state:\n- `active`: paid and current.\n- `trialing`: in a free trial.\n- `past_due`: a payment failed and is being retried.\n- `paused`: the subscription is paused. It resumes from the customer portal.\n- `canceled`: the subscription ended.\n- `incomplete`: the first payment has not gone through yet.\n- `incomplete_expired`: the first payment never went through and the attempt expired.\n- `pending_payment`: waiting for a payment to complete.\n\nWhile the state is `paused`, `canceled` or `incomplete_expired`, requests that change data answer\n`403 FORBIDDEN_ACTION`. Reads keep working.\n\n`null` when the workspace has no billing state recorded.\n"
           },
           "plan": {
             "type": "object",

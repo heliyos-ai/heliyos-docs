@@ -73,7 +73,7 @@ A few account actions are not available to API keys and answer `403 FORBIDDEN_AC
 | Status | Code | Meaning |
 | --- | --- | --- |
 | `401` | `UNAUTHENTICATED` | No key, a malformed key, or a key that is revoked, expired or whose creator lost access. |
-| `403` | `FORBIDDEN_ACTION` | The key is valid but the action is not allowed: the endpoint does not accept API keys, or the workspace plan does not include it. |
+| `403` | `FORBIDDEN_ACTION` | The key is valid but the action is not allowed: the endpoint does not accept API keys, the workspace plan does not include it, or the workspace's subscription is paused or has ended. |
 | `429` | `RATE_LIMITED` | Too many requests. See [Rate limits](/api-reference/rate-limits). |
 
 Repeated requests with keys Heliyos does not recognise are limited to 20 a minute per IP address.

@@ -4,6 +4,13 @@ description: "New endpoints, MCP tools and changes to the Heliyos API and MCP se
 rss: true
 ---
 
+<Update label="November 2026" description="Billing status" tags={["API", "MCP"]}>
+  ## Paused subscriptions
+
+  - `billingStatus` on [the workspace](/api-reference/workspace/get-the-workspace) has a new value, `paused`, for a subscription paused from the customer portal.
+  - While a subscription is paused, requests that change data answer `403 FORBIDDEN_ACTION` with the message "Your subscription is paused. Resume it to continue." Reads keep working, through the API and the MCP server.
+</Update>
+
 <Update label="November 2026" description="API v1.0.0 · MCP v1.0.0" tags={["API", "MCP"]}>
   ## Heliyos API v1.0.0 and MCP server v1.0.0
 
