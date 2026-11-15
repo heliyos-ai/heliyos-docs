@@ -72,7 +72,9 @@ This guide takes about five minutes. You need a Heliyos workspace where you are 
     Use that id to list the first page of companies, newest first:
 
     ```bash
-    curl "https://api-prod.heliyos.ai/v1/platform/base-schemas/66a0f1e2d3c4b5a697880001/records?limit=10" \
+    COMPANIES_ID="66a0f1e2d3c4b5a697880001"   # the companies object id from the previous step
+
+    curl "https://api-prod.heliyos.ai/v1/platform/base-schemas/$COMPANIES_ID/records?limit=10" \
       -H "Authorization: Bearer $HELIYOS_API_KEY"
     ```
 

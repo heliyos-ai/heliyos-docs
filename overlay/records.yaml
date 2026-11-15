@@ -217,10 +217,11 @@ operations:
       }
       ```
 
-      `curl -G --data-urlencode` encodes the JSON into the query string for you:
+      `curl -G --data-urlencode` encodes the JSON into the query string for you. `$DEALS_ID` is the id of
+      your deals object, from [List objects](/api-reference/schemas/list-objects):
 
       ```bash
-      curl -G "https://api-prod.heliyos.ai/v1/platform/base-schemas/66a0f1e2d3c4b5a697880003/records" \
+      curl -G "https://api-prod.heliyos.ai/v1/platform/base-schemas/$DEALS_ID/records" \
         -H "Authorization: Bearer heliyos_..." \
         --data-urlencode 'filters={
           "search": "northwind",
@@ -256,7 +257,6 @@ operations:
     parameters:
       id:
         description: The object's id.
-        example: 66a0f1e2d3c4b5a697880003
       limit:
         description: >-
           Records per page, 1 to 100. Defaults to 20. In page-number mode it is the page size when
@@ -357,7 +357,6 @@ operations:
     parameters:
       id:
         description: The record's id.
-        example: 6721c3d5e6f7a8b9c0d1e2f3
     response:
       description: The record.
       message: Object fetched successfully
@@ -442,7 +441,6 @@ operations:
     parameters:
       id:
         description: The id of the object to create the record in.
-        example: 66a0f1e2d3c4b5a697880003
     requestBody:
       schema:
         type: object
@@ -528,7 +526,6 @@ operations:
     parameters:
       id:
         description: The record's id.
-        example: 6721c3d5e6f7a8b9c0d1e2f3
     requestBody:
       schema:
         type: object
@@ -592,7 +589,6 @@ operations:
     parameters:
       id:
         description: The id of the object the records belong to.
-        example: 66a0f1e2d3c4b5a697880003
     requestBody:
       schema:
         type: object
@@ -626,7 +622,6 @@ operations:
     parameters:
       id:
         description: The object's id.
-        example: 66a0f1e2d3c4b5a697880001
       limit:
         description: The most records to return, 1 to 2000. Defaults to 1000.
         example: 1000

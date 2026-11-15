@@ -24,7 +24,7 @@ operations:
     parameters:          # EVERY generated path and query parameter, by name
       <name>:
         description: ...
-        example: ...     # optional
+        example: ...     # optional; query parameters only (path parameters take none, see Examples)
         schema: { enum: [...] }   # optional: merged onto the generated schema
         omit: true       # optional: hide a parameter that is not for API users (say why in a comment)
     requestBody:         # required when the API takes a body; forbidden when it does not
@@ -78,6 +78,12 @@ is irreversible, or cascades. Destructive calls get a `<Warning>` in `content`.
 **Examples.** Realistic and fictional. Use companies such as Northwind Traders, Contoso, Fabrikam,
 people with example names, `example.com` addresses and made-up 24-character hex ids. Never copy a
 real customer name, email, domain or id from the database, fixtures or logs.
+
+Never put an id inside an API URL. Path parameters take no `example` (the build fails on one):
+Mintlify builds each request sample from the server URL plus the path example, and a full,
+real-looking `https://api-prod.heliyos.ai/...` URL on the page gets crawled by search engines.
+The sample reads `{id}` instead. In hand-written `curl` samples use a shell variable such as
+`$COMPANIES_ID` or `$TASK_ID`, as the guides do. Ids inside request and response bodies are fine.
 
 **Copy (Heliyos style).**
 - No em dashes anywhere. Use a full stop, a comma or a middle dot (·).

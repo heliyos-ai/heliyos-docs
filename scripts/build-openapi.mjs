@@ -265,12 +265,21 @@ for (const ov of overlays) {
           return p;
         }
         const { description, example, schema, required } = o;
+        // Path parameters carry no example. Mintlify builds each request sample from the server
+        // URL plus the path example, so an example id puts a full, real-looking API URL on the
+        // page and search engines crawl it. Without one the sample reads `{id}`.
+        const isPath = p.in === "path";
+        if (isPath && (example !== undefined || schema?.example !== undefined)) {
+          fail(`${opId}: path parameter ${p.name} has an example; path parameters take none (see AUTHORING.md).`);
+        }
+        const { example: _genExample, examples: _genExamples, ...gen } = p;
+        const { example: _genSchemaExample, ...genSchema } = p.schema ?? {};
         return {
-          ...p,
-          ...(required !== undefined && p.in !== "path" ? { required } : {}),
+          ...(isPath ? gen : p),
+          ...(required !== undefined && !isPath ? { required } : {}),
           description: description.trim(),
-          ...(example !== undefined ? { example } : {}),
-          schema: { ...(p.schema ?? {}), ...(schema ?? {}) },
+          ...(example !== undefined && !isPath ? { example } : {}),
+          schema: { ...(isPath ? genSchema : p.schema ?? {}), ...(schema ?? {}) },
         };
       });
 

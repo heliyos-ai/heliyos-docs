@@ -287,7 +287,6 @@ operations:
     parameters:
       id:
         description: The task's id.
-        example: 6728c9afb2c3d4e5f6a7b8ce
     response:
       description: The task.
       message: Task fetched successfully.
@@ -444,7 +443,6 @@ operations:
     parameters:
       id:
         description: The task's id.
-        example: 6728c9afb2c3d4e5f6a7b8ce
     requestBody:
       schema:
         type: object
@@ -521,7 +519,6 @@ operations:
     parameters:
       id:
         description: The task's id.
-        example: 6728c9afb2c3d4e5f6a7b8ce
     response:
       description: The task was deleted.
       message: Task deleted successfully
@@ -570,7 +567,6 @@ operations:
     parameters:
       id:
         description: The task's id.
-        example: 6728c9afb2c3d4e5f6a7b8ce
     response:
       description: The run that is now working the task.
       message: Task run started.

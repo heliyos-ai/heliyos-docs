@@ -451,7 +451,6 @@ operations:
     parameters:
       id:
         description: The review's id.
-        example: 6731f0a9b2c4d5e6f7a8b9c0
     response:
       description: The review.
       message: Successful request
@@ -544,7 +543,6 @@ operations:
     parameters:
       id:
         description: The review's id.
-        example: 6731f2c4d5e6f7a8b9c0d1e2
     requestBody:
       schema:
         type: object

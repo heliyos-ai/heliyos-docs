@@ -269,7 +269,6 @@ operations:
     parameters:
       id:
         description: The interaction's id.
-        example: 6728b1c2d3e4f5a6b7c8d9e0
     response:
       description: The interaction.
       message: Interaction fetched successfully.

@@ -610,7 +610,6 @@ operations:
     parameters:
       id:
         description: The object's id.
-        example: 6730b1c4d3e5f6a7b8c9d0e1
     response:
       description: The object.
       message: Base schema retrieved successfully
@@ -687,7 +686,6 @@ operations:
     parameters:
       id:
         description: The object's id.
-        example: 6730b1c4d3e5f6a7b8c9d0e1
     requestBody:
       schema:
         type: object
@@ -822,10 +820,8 @@ operations:
     parameters:
       id:
         description: The object's id.
-        example: 6730b1c4d3e5f6a7b8c9d0e1
       fieldId:
         description: The field's `id`, from Get an object.
-        example: 6730c2d5e4f6a7b8c9d0e1f2
     requestBody:
       schema:
         type: object
@@ -943,10 +939,8 @@ operations:
     parameters:
       id:
         description: The object's id.
-        example: 6730b1c4d3e5f6a7b8c9d0e1
       fieldId:
         description: The field's `id`, from Get an object.
-        example: 6730c2d5e4f6a7b8c9d0e1f2
     response:
       description: The field and its values were deleted. `data` is an empty object.
       message: Schema attribute deleted successfully

@@ -168,7 +168,6 @@ operations:
     parameters:
       id:
         description: The workspace Scout's id.
-        example: 6731c0a2b4e5f60718293a4b
       limit:
         description: Signals per page, 1 to 100. Defaults to 20.
         example: 20
@@ -224,7 +223,6 @@ operations:
     parameters:
       id:
         description: The signal's id.
-        example: 6735a9d1e2f3a4b5c6d7e8f9
     response:
       description: The signal, now read.
       message: Signal marked as read

@@ -197,7 +197,6 @@ operations:
     parameters:
       id:
         description: The label group's id.
-        example: 6729d0a1b2c3d4e5f6a7b8c9
     requestBody:
       schema:
         type: object
@@ -276,7 +275,6 @@ operations:
     parameters:
       id:
         description: The label group's id.
-        example: 6729d0a1b2c3d4e5f6a7b8c9
     response:
       description: The label group was deleted. `data` is an empty object.
       message: Classification labels deleted successfully

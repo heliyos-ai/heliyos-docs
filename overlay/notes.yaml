@@ -85,7 +85,6 @@ operations:
     parameters:
       id:
         description: The note's id.
-        example: 6720b1f4c2a9e3d1f0a4b5c6
     response:
       description: The note.
       message: Note fetched successfully.
@@ -162,7 +161,6 @@ operations:
     parameters:
       id:
         description: The note's id.
-        example: 6720b1f4c2a9e3d1f0a4b5c6
     requestBody:
       schema:
         type: object
@@ -197,7 +195,6 @@ operations:
     parameters:
       id:
         description: The note's id.
-        example: 6720b1f4c2a9e3d1f0a4b5c6
     response:
       status: 204
       description: The note was deleted. The response has no body.
