@@ -196,9 +196,12 @@ operations:
             `greater_than`, `less_than`, `greater_than_equal`, `less_than_equal`, `after`, `before`, `between`
             (value `{"startDate","endDate"}` as a JSON string), and `is` / `is_not` for `participants`.
             Special fields: `channelType`, `categoryIds`, `participants` (meeting invitee addresses),
-            `hasAgentDraft` (true for threads holding a worker's unsent draft), and
+            `hasAgentDraft` (true for threads holding a worker's unsent draft), `company` (the name of a
+            linked company, case-insensitive: `contains`, `not_contains`, `equals` or `is`, `not_equals` or
+            `is_not`, `starts_with`, `ends_with`; `empty` and `not_empty` test whether any company is linked;
+            the `not_` operators also keep interactions with no company), and
             `relationships.<objectType>.<field>` to match a linked record's field value, for example
-            `relationships.company.company_name`.
+            `relationships.company.company_name`. Two conditions on the same field both apply.
           - `page` and `pageSize`: page-number paging. `pageSize` is capped at 200.
         example: '{"objectId":"66f1a8c3e4b0a1b2c3d4e5f6","channelType":"email","sort":[{"field":"thread_date","direction":"desc"}]}'
     response:

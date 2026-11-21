@@ -48,8 +48,8 @@ components:
   WorkspaceProfile:
     type: object
     description: >-
-      The workspace's profile and knowledge base. The response also carries other workspace
-      settings that this page does not document. Rely only on the fields listed here.
+      The workspace's profile and knowledge base. The response carries only the fields listed here;
+      a field that is not set is absent.
     properties:
       id:
         allOf: [{ $ref: "#/components/schemas/ObjectId" }]
@@ -60,6 +60,9 @@ components:
       name:
         type: string
         description: The workspace's name.
+      email:
+        type: string
+        description: The workspace's contact email. Absent when not set.
       businessContext:
         type: string
         description: What the business does, in your team's words. Empty string when not set.
@@ -91,6 +94,57 @@ components:
       logo:
         type: string
         description: The logo, as a file id or the https URL of a file stored in Heliyos. Absent when not set.
+      summary:
+        type: string
+        description: A summary of the workspace. Empty string when not set.
+      isActive:
+        type: boolean
+        description: "`false` when the workspace is deactivated."
+      organizationType:
+        type: string
+        enum: [STANDARD, AGENCY]
+        description: The kind of workspace, `STANDARD` unless set otherwise.
+      billingStatus:
+        type: string
+        enum: [active, trialing, past_due, paused, canceled, incomplete, incomplete_expired, pending_payment]
+        description: The status of the workspace's subscription.
+      trialPeriodDays:
+        type: integer
+        description: The length of the trial in days. `0` when there is no trial.
+      planType:
+        type: string
+        enum: [Basic, Pro, Custom]
+        description: >-
+          An older plan field, kept for compatibility. It can be absent or out of date: do not rely on
+          it for the current plan.
+      planValue:
+        type: number
+        description: An older plan field, kept for compatibility. Can be absent or out of date.
+      totalCredits:
+        type: number
+        description: >-
+          An older credit field, kept for compatibility. Can be absent or out of date: do not rely on it
+          for the current credit balance.
+      totalCreditsLeft:
+        type: number
+        description: An older credit field, kept for compatibility. Can be absent or out of date.
+      createdBy:
+        allOf: [{ $ref: "#/components/schemas/ObjectId" }]
+        description: The user who created the workspace.
+      productsInformation:
+        type: string
+        description: >-
+          Workspaces set up before `knowledgeBase` existed can still carry this text, and the next three,
+          at the root. They are earlier copies of the knowledge base texts: read `knowledgeBase` instead.
+      painPoints:
+        type: string
+        description: An earlier copy of `knowledgeBase.painPoints` on older workspaces. Read `knowledgeBase` instead.
+      valueProposition:
+        type: string
+        description: An earlier copy of `knowledgeBase.valueProposition` on older workspaces. Read `knowledgeBase` instead.
+      qualificationCriteria:
+        type: string
+        description: An earlier copy of `knowledgeBase.qualificationCriteria` on older workspaces. Read `knowledgeBase` instead.
       createdAt: { $ref: "#/components/schemas/Timestamp" }
       updatedAt: { $ref: "#/components/schemas/Timestamp" }
 
@@ -117,6 +171,10 @@ operations:
         website: https://northwind.example.com
         industry: Wholesale distribution
         timezone: America/New_York
+        isActive: true
+        organizationType: STANDARD
+        billingStatus: active
+        trialPeriodDays: 0
         businessContext: >-
           Northwind Traders supplies specialty food and beverage products to independent grocers and
           cafes across North America.

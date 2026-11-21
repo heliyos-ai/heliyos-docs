@@ -2,7 +2,7 @@
   "server": {
     "name": "heliyos",
     "title": "Heliyos",
-    "version": "1.0.0"
+    "version": "1.0.5"
   },
   "protocolVersion": "2025-06-18",
   "tools": [
@@ -2803,13 +2803,18 @@
     {
       "name": "heliyos_tasks_list",
       "title": "List tasks",
-      "description": "Lists tasks, newest first, optionally only those linked to one record (record_id), in one status, or matching text. Each task shows its id, title, status, priority, due date and whether workers are running on it. Use heliyos_tasks_get for the description and links. Returns structuredContent {tasks:[{id, title, status, ...}], next_cursor}.",
+      "description": "Lists tasks, newest first, optionally only those linked to one record (record_id), assigned to one person (assignee_id), in one status, or matching text. Each task shows its id, title, status, priority, due date and whether workers are running on it. Use heliyos_tasks_get for the description and links. Returns structuredContent {tasks:[{id, title, status, ...}], next_cursor}.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "properties": {
           "record_id": {
             "description": "Only tasks linked to this record.",
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$"
+          },
+          "assignee_id": {
+            "description": "Only tasks assigned to this person: a user_id from heliyos_team_members_list.",
             "type": "string",
             "pattern": "^[0-9a-fA-F]{24}$"
           },
@@ -7998,7 +8003,7 @@
                   "type": "string"
                 },
                 "source": {
-                  "description": "Who raises it: platform, internal, nylas, recall, typeform, composio, ...",
+                  "description": "Who raises it: platform, internal, mailbox (the connected email and calendar), meetings (the meeting recorder), connector (a connected app), typeform, ...",
                   "type": "string"
                 },
                 "integration": {
@@ -8041,7 +8046,7 @@
             ]
           },
           "provider": {
-            "description": "Only one integration's actions, for example gmail or hubspot.",
+            "description": "Only one provider's tools, for example mailbox, hubspot or google-drive.",
             "type": "string",
             "minLength": 1,
             "maxLength": 100
@@ -8099,7 +8104,7 @@
                   "type": "string"
                 },
                 "provider": {
-                  "description": "action only: the integration, for example gmail, hubspot, google_drive.",
+                  "description": "Who provides it: mailbox, google-drive, onedrive or hubspot (a connected app), web or web-research (Heliyos's web research), builtin (Heliyos itself).",
                   "type": "string"
                 },
                 "action_id": {

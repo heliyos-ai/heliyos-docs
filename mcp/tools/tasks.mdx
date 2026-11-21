@@ -25,12 +25,16 @@ Write and destructive tools change your workspace. Clients that support it ask b
 
 `heliyos_tasks_list` · **Read** · Idempotent
 
-Lists tasks, newest first, optionally only those linked to one record (record_id), in one status, or matching text. Each task shows its id, title, status, priority, due date and whether workers are running on it. Use heliyos_tasks_get for the description and links. Returns structuredContent \{tasks:[\{id, title, status, ...\}], next_cursor\}.
+Lists tasks, newest first, optionally only those linked to one record (record_id), assigned to one person (assignee_id), in one status, or matching text. Each task shows its id, title, status, priority, due date and whether workers are running on it. Use heliyos_tasks_get for the description and links. Returns structuredContent \{tasks:[\{id, title, status, ...\}], next_cursor\}.
 
 ### Inputs
 
 <ParamField path="record_id" type="string">
   Only tasks linked to this record. A 24-character hex id.
+</ParamField>
+
+<ParamField path="assignee_id" type="string">
+  Only tasks assigned to this person: a user_id from heliyos_team_members_list. A 24-character hex id.
 </ParamField>
 
 <ParamField path="status" type="string">

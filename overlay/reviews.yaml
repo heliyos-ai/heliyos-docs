@@ -1,6 +1,6 @@
 tag:
   name: Reviews
-  icon: /icons/tasks.svg
+  icon: /icons/app-reviews.svg
   order: 75
   description: >-
     Reviews keep the team in control of consequential work. When a worker wants to send an email, change a
@@ -264,6 +264,8 @@ components:
           What happened after the decision. `ok` (whether it worked), `at`, and `error` when it failed. For an
           action a run carried out, `result` with what the action returned. For a deal or label Heliyos applied
           on approval, `appliedBy: platform` with `action`, `dealId` or `labelId`. Absent until something happened.
+          An error from an outside service reads as a neutral message, for example `The email and calendar
+          provider returned an error.`
       metadata:
         type: object
         description: When the review was raised and last changed.
@@ -329,14 +331,17 @@ components:
       orchestrator:
         type: object
         nullable: true
-        additionalProperties: true
         description: |
-          What the worker run did with the decision:
+          What the worker run did with the decision. Only these keys appear:
+          - `status`: the decision as the run recorded it.
           - `runId` and `resuming: true`: this was the last pending review of the run, which now resumes and carries out (or drops) the action.
           - `runId` and `pending`: the run still waits on this many other reviews. Nothing runs until they are decided.
           - `runId` alone: the run is no longer waiting, so nothing resumes.
-          - `sent`: for a saved email draft, whether it was sent.
-          - `error`: for a saved email draft, why sending or discarding failed. The decision is still recorded.
+          - `sent` and `messageId`: for a saved email draft, whether it was sent and the sent message's id.
+          - `deleted` and `mailboxErrors`: for a rejected email draft, whether it was discarded and what went wrong for each copy that could not be.
+          - `interactionId` and `reviewId`: the email thread and the review the answer is about.
+          - `error`: for a saved email draft, why sending or discarding failed. The decision is still recorded. An error from
+            the email and calendar provider reads as `The email and calendar provider returned an error.`
       orchestratorError:
         type: string
         description: >-

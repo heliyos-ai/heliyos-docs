@@ -198,13 +198,8 @@ components:
         allOf: [{ $ref: "#/components/schemas/Timestamp" }]
         nullable: true
         description: When it last ran. Null before its first run.
-      lastRunId:
-        type: string
-        nullable: true
-        description: The id of its last run.
       outputSchema: { $ref: "#/components/schemas/ScoutOutputSchema" }
       metadata: { $ref: "#/components/schemas/ScoutAuditMetadata" }
-    additionalProperties: true
 
   GlobalScoutStateChange:
     type: object
@@ -267,7 +262,7 @@ operations:
           outputSchema: { type: json, json_schema: { type: object, properties: { signals: { type: array } } } }
           isActive: true
           previewStatus: completed
-          previewRunId: trun_4b8e2f1a9c7d
+          previewRunId: run_4b8e2f1a9c7d
           previewData: null
           metadata:
             created: { at: "2026-10-02T08:15:00.000Z", by: system }
@@ -311,7 +306,7 @@ operations:
         effort: medium
         isActive: false
         previewStatus: completed
-        previewRunId: trun_4b8e2f1a9c7d
+        previewRunId: run_4b8e2f1a9c7d
         previewData:
           signals:
             - company_name: Contoso
@@ -402,8 +397,9 @@ operations:
             description: |
               The structured output each run returns. Send `{ "type": "json", "json_schema": { ... } }` or a bare JSON
               Schema object (`{ "type": "object", "properties": { ... } }`); anything else becomes an empty object
-              schema. In `signals[].items`, `citations`, `confidence_score` and `source` are removed and a `sources`
-              array is added. Omit it for the default schema (see the `ScoutOutputSchema` component).
+              schema. `citations`, `confidence_score` and `source` are reserved signal fields, so they are removed from
+              `signals[].items`, and a `sources` array (the source URLs of each entry) is added. Omit it for the
+              default schema (see the `ScoutOutputSchema` component).
       examples:
         watchlist:
           summary: Every watched company
@@ -440,7 +436,7 @@ operations:
         effort: medium
         isActive: false
         previewStatus: running
-        previewRunId: trun_4b8e2f1a9c7d
+        previewRunId: run_4b8e2f1a9c7d
         previewData: null
         metadata:
           created: { at: "2026-11-04T09:30:00.000Z", by: system }

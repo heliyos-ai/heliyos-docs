@@ -129,7 +129,9 @@ components:
         type: array
         description: >-
           The records the task is linked to. In list and get responses each entry is hydrated with the
-          record's field values in `data` and its object in `schema`.
+          record's field values in `data` and its object in `schema`. In list responses `schema` carries
+          only `_id`, `name`, `objectType` and, in `fields`, the field that names the record (the one with
+          `sequence` 1); get the task, or the object, for the rest.
         items: { $ref: "#/components/schemas/Relationship" }
       currentRunId:
         type: string
@@ -227,15 +229,23 @@ operations:
             combined with AND; a condition with `"conjunction": "or"` joins an OR group instead. Operators:
             `equals`, `not_equals`, `contains`, `in` (value is a list), `gt` or `after`, `gte`, `lt` or `before`,
             `lte`, `empty`, `not_empty`. Fields include `status`, `priority`, `title`, `description`, `dueDate`,
-            `isFinished` (value `"true"` or `"false"` as a string), `assignedUser` (matches the assignee's name,
-            case-insensitive), `metadata.created.by` (a user id),
+            `isFinished` (value `"true"` or `"false"` as a string), `assignedUser.id` (a user id with `equals`,
+            or a list of user ids with `in`; a value that is not a user id matches no task; `not_equals` and
+            `not_in` keep the tasks assigned to none of them, unassigned tasks included), `assignedUser`
+            (matches the assignee's name, case-insensitive), `metadata.created.by` (a user id, with `equals`
+            or `is`, and `not_equals` or `is_not` for the tasks anyone else created),
             `metadata.created.at` and `metadata.updated.at` (`equals` matches the whole day, plus `after`, `before`).
           - `sort` (array): `{ "field", "direction" }` with direction `asc` or `desc`, for example
             `[{"field": "dueDate", "direction": "asc"}]`. Text sorts ignore case.
           - `groupBy` (string): one of `status`, `priority`, `assignedUser`, `dueDate`, `createdAt`,
             `isFinished`, `title`. Each item in `data` is then a group `{ groupValue, count, tasks }`
             instead of a task. Grouping by `status` or `priority` returns one group per value, each with
-            its total `count` and its first `pageSize` tasks. Other groupings return at most 1000 tasks in all.
+            its total `count` and its first `pageSize` tasks. Other groupings return at most 1000 tasks in all,
+            groups in value order with the group without a value (`groupValue` `"null"`) last, and the tasks
+            in each group in `sort` order. `dueDate` groups by day: `groupValue` is the start of the day in
+            `timezone`. `assignedUser` returns one group per assignee, by name; `groupValue` is the user id.
+          - `timezone` (string): an IANA time zone, for example `Asia/Kolkata`, that the days of a `dueDate`
+            grouping are read in. Defaults to UTC, also when the value is not a time zone.
           - `page` and `pageSize`: page-number paging. `pageSize` is capped at 200.
         example: '{"relatedObjectId":"66f1a8c3e4b0a1b2c3d4e5f6","filters":[{"field":"status","operator":"equals","value":"in_progress"}]}'
     response:

@@ -63,22 +63,6 @@ components:
         type: string
         enum: [new, read, archived]
         description: "`new` (unread), `read`, or `archived`. This API sets `read`; it does not archive."
-      raw_output:
-        type: object
-        additionalProperties: true
-        description: The Scout's structured output for this signal, in the shape of its output schema.
-      eventId:
-        type: string
-        description: The id of the detection event. Internal; unique per run.
-      parallelMonitorId:
-        type: string
-        description: The id of the monitor or run that produced the signal. Internal.
-      taskRunId:
-        type: string
-        description: The id of the custom Scout run that produced the signal. Internal; absent for built-in Scouts.
-      webhook_timestamp:
-        type: string
-        description: When the result was delivered. Internal.
       metadata: { $ref: "#/components/schemas/ScoutAuditMetadata" }
 
   SignalWithCompany:

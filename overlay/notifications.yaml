@@ -1,6 +1,6 @@
 tag:
   name: Notification settings
-  icon: /icons/app-preferences.svg
+  icon: /icons/app-notifications.svg
   order: 140
   description: >-
     Which workspace events send notification emails, how often, and to whom. There is one settings

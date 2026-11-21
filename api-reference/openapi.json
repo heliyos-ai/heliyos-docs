@@ -816,7 +816,7 @@
                     "description": "Resellers and referral partners.",
                     "type": "custom",
                     "objectType": "partners",
-                    "icon": "PiHandshake",
+                    "icon": "PiCommunityStroke",
                     "viewType": "table",
                     "kanbanConfig": {
                       "_id": "6730b1c4d3e5f6a7b8c9d0e2",
@@ -829,7 +829,7 @@
                         "name": "partner_tier",
                         "displayName": "Partner tier",
                         "description": "Commercial tier agreed in the partner contract.",
-                        "icon": "PiMedal",
+                        "icon": "PiStarStroke",
                         "type": {
                           "type": "select",
                           "enum": [
@@ -1055,7 +1055,7 @@
                     "name": "partner_tier",
                     "displayName": "Partner tier",
                     "description": "Commercial tier agreed in the partner contract.",
-                    "icon": "PiMedal",
+                    "icon": "PiStarStroke",
                     "type": {
                       "type": "select",
                       "enum": [
@@ -1763,7 +1763,7 @@
                     "description": "Resellers and referral partners.",
                     "type": "custom",
                     "objectType": "partners",
-                    "icon": "PiHandshake",
+                    "icon": "PiCommunityStroke",
                     "viewType": "table",
                     "kanbanConfig": {
                       "_id": "6730b1c4d3e5f6a7b8c9d0e2",
@@ -4329,7 +4329,7 @@
               "maxLength": 20000,
               "description": "JSON-encoded filter object (search, filters, sort, page, pageSize). Optional. pageSize above 200 is clamped to 200."
             },
-            "description": "A JSON object, URL-encoded. Keys:\n- `objectId` (id): only interactions linked to this record.\n- `channelType` (string or array): `email`, `meeting`, or both (an array or a comma-separated string).\n- `categoryIds` (string or array): only interactions with any of these label ids.\n- `search` (string): case-insensitive text match on the subject, title, summary, message\n  previews, takeaways, transcript and participant addresses.\n- `uniqByRelationships` (any non-empty value): keep one interaction per distinct set of linked records.\n- `sort` (array): `{ \"field\", \"direction\" }` with direction `asc` or `desc`. Useful fields:\n  `thread_date` (newest email message), `start_time` (meeting start), `createdAt` (when synced).\n- `filters` (array): conditions `{ \"field\", \"operator\", \"value\", \"conjunction\" }`. Conditions with\n  `\"conjunction\": \"and\"` must all match. Conditions without it, or with `\"or\"`, are combined with OR,\n  so set `\"conjunction\": \"and\"` on every condition you need to hold. Operators: `equals`, `not_equals`,\n  `contains`, `not_contains`, `starts_with`, `ends_with`, `empty`, `not_empty`, `in`, `not_in`,\n  `greater_than`, `less_than`, `greater_than_equal`, `less_than_equal`, `after`, `before`, `between`\n  (value `{\"startDate\",\"endDate\"}` as a JSON string), and `is` / `is_not` for `participants`.\n  Special fields: `channelType`, `categoryIds`, `participants` (meeting invitee addresses),\n  `hasAgentDraft` (true for threads holding a worker's unsent draft), and\n  `relationships.<objectType>.<field>` to match a linked record's field value, for example\n  `relationships.company.company_name`.\n- `page` and `pageSize`: page-number paging. `pageSize` is capped at 200.",
+            "description": "A JSON object, URL-encoded. Keys:\n- `objectId` (id): only interactions linked to this record.\n- `channelType` (string or array): `email`, `meeting`, or both (an array or a comma-separated string).\n- `categoryIds` (string or array): only interactions with any of these label ids.\n- `search` (string): case-insensitive text match on the subject, title, summary, message\n  previews, takeaways, transcript and participant addresses.\n- `uniqByRelationships` (any non-empty value): keep one interaction per distinct set of linked records.\n- `sort` (array): `{ \"field\", \"direction\" }` with direction `asc` or `desc`. Useful fields:\n  `thread_date` (newest email message), `start_time` (meeting start), `createdAt` (when synced).\n- `filters` (array): conditions `{ \"field\", \"operator\", \"value\", \"conjunction\" }`. Conditions with\n  `\"conjunction\": \"and\"` must all match. Conditions without it, or with `\"or\"`, are combined with OR,\n  so set `\"conjunction\": \"and\"` on every condition you need to hold. Operators: `equals`, `not_equals`,\n  `contains`, `not_contains`, `starts_with`, `ends_with`, `empty`, `not_empty`, `in`, `not_in`,\n  `greater_than`, `less_than`, `greater_than_equal`, `less_than_equal`, `after`, `before`, `between`\n  (value `{\"startDate\",\"endDate\"}` as a JSON string), and `is` / `is_not` for `participants`.\n  Special fields: `channelType`, `categoryIds`, `participants` (meeting invitee addresses),\n  `hasAgentDraft` (true for threads holding a worker's unsent draft), `company` (the name of a\n  linked company, case-insensitive: `contains`, `not_contains`, `equals` or `is`, `not_equals` or\n  `is_not`, `starts_with`, `ends_with`; `empty` and `not_empty` test whether any company is linked;\n  the `not_` operators also keep interactions with no company), and\n  `relationships.<objectType>.<field>` to match a linked record's field value, for example\n  `relationships.company.company_name`. Two conditions on the same field both apply.\n- `page` and `pageSize`: page-number paging. `pageSize` is capped at 200.",
             "example": "{\"objectId\":\"66f1a8c3e4b0a1b2c3d4e5f6\",\"channelType\":\"email\",\"sort\":[{\"field\":\"thread_date\",\"direction\":\"desc\"}]}"
           }
         ],
@@ -5489,7 +5489,7 @@
               "maxLength": 20000,
               "description": "JSON-encoded filter object (search, filters, sort, page, pageSize). Optional. pageSize above 200 is clamped to 200."
             },
-            "description": "A JSON object, URL-encoded. Keys:\n- `search` (string): matches text in the title or description, case-insensitive.\n- `relatedObjectId` (id): only tasks linked to this record.\n- `filters` (array): conditions `{ \"field\", \"operator\", \"value\", \"conjunction\" }`. Conditions are\n  combined with AND; a condition with `\"conjunction\": \"or\"` joins an OR group instead. Operators:\n  `equals`, `not_equals`, `contains`, `in` (value is a list), `gt` or `after`, `gte`, `lt` or `before`,\n  `lte`, `empty`, `not_empty`. Fields include `status`, `priority`, `title`, `description`, `dueDate`,\n  `isFinished` (value `\"true\"` or `\"false\"` as a string), `assignedUser` (matches the assignee's name,\n  case-insensitive), `metadata.created.by` (a user id),\n  `metadata.created.at` and `metadata.updated.at` (`equals` matches the whole day, plus `after`, `before`).\n- `sort` (array): `{ \"field\", \"direction\" }` with direction `asc` or `desc`, for example\n  `[{\"field\": \"dueDate\", \"direction\": \"asc\"}]`. Text sorts ignore case.\n- `groupBy` (string): one of `status`, `priority`, `assignedUser`, `dueDate`, `createdAt`,\n  `isFinished`, `title`. Each item in `data` is then a group `{ groupValue, count, tasks }`\n  instead of a task. Grouping by `status` or `priority` returns one group per value, each with\n  its total `count` and its first `pageSize` tasks. Other groupings return at most 1000 tasks in all.\n- `page` and `pageSize`: page-number paging. `pageSize` is capped at 200.",
+            "description": "A JSON object, URL-encoded. Keys:\n- `search` (string): matches text in the title or description, case-insensitive.\n- `relatedObjectId` (id): only tasks linked to this record.\n- `filters` (array): conditions `{ \"field\", \"operator\", \"value\", \"conjunction\" }`. Conditions are\n  combined with AND; a condition with `\"conjunction\": \"or\"` joins an OR group instead. Operators:\n  `equals`, `not_equals`, `contains`, `in` (value is a list), `gt` or `after`, `gte`, `lt` or `before`,\n  `lte`, `empty`, `not_empty`. Fields include `status`, `priority`, `title`, `description`, `dueDate`,\n  `isFinished` (value `\"true\"` or `\"false\"` as a string), `assignedUser.id` (a user id with `equals`,\n  or a list of user ids with `in`; a value that is not a user id matches no task; `not_equals` and\n  `not_in` keep the tasks assigned to none of them, unassigned tasks included), `assignedUser`\n  (matches the assignee's name, case-insensitive), `metadata.created.by` (a user id, with `equals`\n  or `is`, and `not_equals` or `is_not` for the tasks anyone else created),\n  `metadata.created.at` and `metadata.updated.at` (`equals` matches the whole day, plus `after`, `before`).\n- `sort` (array): `{ \"field\", \"direction\" }` with direction `asc` or `desc`, for example\n  `[{\"field\": \"dueDate\", \"direction\": \"asc\"}]`. Text sorts ignore case.\n- `groupBy` (string): one of `status`, `priority`, `assignedUser`, `dueDate`, `createdAt`,\n  `isFinished`, `title`. Each item in `data` is then a group `{ groupValue, count, tasks }`\n  instead of a task. Grouping by `status` or `priority` returns one group per value, each with\n  its total `count` and its first `pageSize` tasks. Other groupings return at most 1000 tasks in all,\n  groups in value order with the group without a value (`groupValue` `\"null\"`) last, and the tasks\n  in each group in `sort` order. `dueDate` groups by day: `groupValue` is the start of the day in\n  `timezone`. `assignedUser` returns one group per assignee, by name; `groupValue` is the user id.\n- `timezone` (string): an IANA time zone, for example `Asia/Kolkata`, that the days of a `dueDate`\n  grouping are read in. Defaults to UTC, also when the value is not a time zone.\n- `page` and `pageSize`: page-number paging. `pageSize` is capped at 200.",
             "example": "{\"relatedObjectId\":\"66f1a8c3e4b0a1b2c3d4e5f6\",\"filters\":[{\"field\":\"status\",\"operator\":\"equals\",\"value\":\"in_progress\"}]}"
           }
         ],
@@ -6651,7 +6651,7 @@
                       "name": "Account researcher",
                       "type": "custom",
                       "isActive": true,
-                      "icon": "search",
+                      "icon": "clay:Riley",
                       "isExcluded": false,
                       "description": "Researches a company before a first call and writes a brief on the record.",
                       "instructions": "When a meeting is booked with a new company, research it and add a note with...",
@@ -6950,8 +6950,8 @@
                   "icon": {
                     "type": "string",
                     "maxLength": 100,
-                    "description": "An icon name for the Heliyos app, up to 100 characters.",
-                    "example": "search"
+                    "description": "The worker's icon in the Heliyos app, up to 100 characters: `clay:<seed>` for a clay avatar, or an icon name from the app.",
+                    "example": "clay:Riley"
                   },
                   "instructions": {
                     "type": "string",
@@ -7170,7 +7170,7 @@
                     "name": "Account researcher",
                     "type": "custom",
                     "isActive": true,
-                    "icon": "search",
+                    "icon": "clay:Riley",
                     "isExcluded": false,
                     "description": "Researches a company before a first call and writes a brief on the record.",
                     "instructions": "When a meeting is booked with a new company, research it and add a note with its products, recent news and likely priorities.",
@@ -7443,7 +7443,7 @@
                   "icon": {
                     "type": "string",
                     "maxLength": 100,
-                    "description": "A new icon name, up to 100 characters."
+                    "description": "A new icon, up to 100 characters: `clay:<seed>` for a clay avatar, or an icon name from the app."
                   },
                   "instructions": {
                     "type": "string",
@@ -8609,7 +8609,6 @@
                         "objectType": "company",
                         "source": "typeform",
                         "provider": "typeform",
-                        "providerRef": "TYPEFORM_NEW_RESPONSE",
                         "integration": {
                           "title": "Typeform",
                           "iconSrc": "https://cdn.example.com/icons/typeform.svg",
@@ -8797,7 +8796,7 @@
                         "source": "builtin",
                         "is_internal": true,
                         "action_id": null,
-                        "provider": null,
+                        "provider": "web",
                         "risk": "read",
                         "review_type": "web_search",
                         "common": false,
@@ -8817,6 +8816,7 @@
                         "source": "action",
                         "is_internal": false,
                         "action_id": "6721b2c3d4e5f6a7b8c9d0e1",
+                        "provider": "mailbox",
                         "risk": "schedule_meeting",
                         "review_type": "meeting_scheduled",
                         "common": false,
@@ -9811,7 +9811,7 @@
                       },
                       "isActive": true,
                       "previewStatus": "completed",
-                      "previewRunId": "trun_4b8e2f1a9c7d",
+                      "previewRunId": "run_4b8e2f1a9c7d",
                       "previewData": null,
                       "metadata": {
                         "created": {
@@ -9956,7 +9956,7 @@
                     "effort": "medium",
                     "isActive": false,
                     "previewStatus": "running",
-                    "previewRunId": "trun_4b8e2f1a9c7d",
+                    "previewRunId": "run_4b8e2f1a9c7d",
                     "previewData": null,
                     "metadata": {
                       "created": {
@@ -10119,7 +10119,7 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": true,
-                    "description": "The structured output each run returns. Send `{ \"type\": \"json\", \"json_schema\": { ... } }` or a bare JSON\nSchema object (`{ \"type\": \"object\", \"properties\": { ... } }`); anything else becomes an empty object\nschema. In `signals[].items`, `citations`, `confidence_score` and `source` are removed and a `sources`\narray is added. Omit it for the default schema (see the `ScoutOutputSchema` component).\n"
+                    "description": "The structured output each run returns. Send `{ \"type\": \"json\", \"json_schema\": { ... } }` or a bare JSON\nSchema object (`{ \"type\": \"object\", \"properties\": { ... } }`); anything else becomes an empty object\nschema. `citations`, `confidence_score` and `source` are reserved signal fields, so they are removed from\n`signals[].items`, and a `sources` array (the source URLs of each entry) is added. Omit it for the\ndefault schema (see the `ScoutOutputSchema` component).\n"
                   }
                 },
                 "required": [
@@ -10235,7 +10235,7 @@
                     "effort": "medium",
                     "isActive": false,
                     "previewStatus": "completed",
-                    "previewRunId": "trun_4b8e2f1a9c7d",
+                    "previewRunId": "run_4b8e2f1a9c7d",
                     "previewData": {
                       "signals": [
                         {
@@ -12578,6 +12578,10 @@
                     "website": "https://northwind.example.com",
                     "industry": "Wholesale distribution",
                     "timezone": "America/New_York",
+                    "isActive": true,
+                    "organizationType": "STANDARD",
+                    "billingStatus": "active",
+                    "trialPeriodDays": 0,
                     "businessContext": "Northwind Traders supplies specialty food and beverage products to independent grocers and cafes across North America.",
                     "knowledgeBase": {
                       "productsInformation": "Wholesale catalogue of 1,200 specialty foods, with next-day delivery in 40 metro areas.",
@@ -17469,7 +17473,7 @@
           },
           "relationships": {
             "type": "array",
-            "description": "The records the task is linked to. In list and get responses each entry is hydrated with the record's field values in `data` and its object in `schema`.",
+            "description": "The records the task is linked to. In list and get responses each entry is hydrated with the record's field values in `data` and its object in `schema`. In list responses `schema` carries only `_id`, `name`, `objectType` and, in `fields`, the field that names the record (the one with `sequence` 1); get the task, or the object, for the rest.",
             "items": {
               "$ref": "#/components/schemas/Relationship"
             }
@@ -17726,7 +17730,7 @@
           },
           "icon": {
             "type": "string",
-            "description": "The icon the Heliyos app shows for the worker."
+            "description": "The icon the Heliyos app shows for the worker: `clay:<seed>` for a clay avatar, or an icon name from the app."
           },
           "isExcluded": {
             "type": "boolean",
@@ -17957,7 +17961,7 @@
           },
           "error": {
             "nullable": true,
-            "description": "`include=step_payloads` only: the step's raw error."
+            "description": "`include=step_payloads` only: the step's error. An error from an outside service (the email and calendar provider, the model provider, a connected app) reads as a neutral message such as `The model provider returned an error.`"
           }
         }
       },
@@ -18151,7 +18155,7 @@
           "error": {
             "type": "string",
             "nullable": true,
-            "description": "`include=detail` only: why the run failed."
+            "description": "`include=detail` only: why the run failed. An error from an outside service (the email and calendar provider, the model provider, a connected app) reads as a neutral message such as `The model provider returned an error.`"
           },
           "workers": {
             "type": "array",
@@ -18325,7 +18329,7 @@
           },
           "error": {
             "type": "string",
-            "description": "Why the run failed."
+            "description": "Why the run failed. An error from an outside service (the email and calendar provider, the model provider, a connected app) reads as a neutral message such as `The model provider returned an error.`"
           },
           "createdAt": {
             "$ref": "#/components/schemas/Timestamp"
@@ -18406,15 +18410,11 @@
           },
           "source": {
             "type": "string",
-            "description": "Where the event comes from. `platform`: a change made in Heliyos, by a person, the API or a worker. `internal`: Heliyos's own background work, such as inbox sync or research. Any other value names the service that delivers the event. Informational: read `integration` to know whether a connected app is needed."
+            "description": "Where the event comes from:\n- `platform`: a change made in Heliyos, by a person, the API or a worker.\n- `internal`: Heliyos's own background work, such as inbox sync, research or schedules.\n- `mailbox`: an email or calendar event from a connected mailbox (Gmail or Outlook).\n- `meetings`: a recorded meeting, from the meeting recorder.\n- `connector`: an event from another connected app.\n- An app's own key, such as `typeform`: an event from that app.\n\nInformational: read `integration` to know whether a connected app is needed.\n"
           },
           "provider": {
             "type": "string",
-            "description": "A key for the app that delivers the event. Present on entries that have `integration`."
-          },
-          "providerRef": {
-            "type": "string",
-            "description": "The app's own name for the event, on entries that come from a connected app."
+            "description": "A key for the app that delivers the event, for example `mailbox` or `typeform`. Present on entries that have `integration`."
           },
           "selectsAttributes": {
             "type": "boolean",
@@ -18477,7 +18477,7 @@
           "provider": {
             "type": "string",
             "nullable": true,
-            "description": "`action` only: a key for the app that performs it. Read `integration` for the app's name and status. `null` for `builtin`."
+            "description": "Who performs it: a connected app (`mailbox`, `google-drive`, `onedrive` or `hubspot`), or Heliyos itself (`web` for web search, `web-research` for web research, `builtin` for other actions it runs). `null` on most `builtin` actions. Read `integration` for a connected app's name and status."
           },
           "integration": {
             "$ref": "#/components/schemas/WorkerIntegrationLink"
@@ -18823,7 +18823,7 @@
             "type": "object",
             "nullable": true,
             "additionalProperties": true,
-            "description": "What happened after the decision. `ok` (whether it worked), `at`, and `error` when it failed. For an action a run carried out, `result` with what the action returned. For a deal or label Heliyos applied on approval, `appliedBy: platform` with `action`, `dealId` or `labelId`. Absent until something happened."
+            "description": "What happened after the decision. `ok` (whether it worked), `at`, and `error` when it failed. For an action a run carried out, `result` with what the action returned. For a deal or label Heliyos applied on approval, `appliedBy: platform` with `action`, `dealId` or `labelId`. Absent until something happened. An error from an outside service reads as a neutral message, for example `The email and calendar provider returned an error.`"
           },
           "metadata": {
             "type": "object",
@@ -18925,8 +18925,7 @@
           "orchestrator": {
             "type": "object",
             "nullable": true,
-            "additionalProperties": true,
-            "description": "What the worker run did with the decision:\n- `runId` and `resuming: true`: this was the last pending review of the run, which now resumes and carries out (or drops) the action.\n- `runId` and `pending`: the run still waits on this many other reviews. Nothing runs until they are decided.\n- `runId` alone: the run is no longer waiting, so nothing resumes.\n- `sent`: for a saved email draft, whether it was sent.\n- `error`: for a saved email draft, why sending or discarding failed. The decision is still recorded.\n"
+            "description": "What the worker run did with the decision. Only these keys appear:\n- `status`: the decision as the run recorded it.\n- `runId` and `resuming: true`: this was the last pending review of the run, which now resumes and carries out (or drops) the action.\n- `runId` and `pending`: the run still waits on this many other reviews. Nothing runs until they are decided.\n- `runId` alone: the run is no longer waiting, so nothing resumes.\n- `sent` and `messageId`: for a saved email draft, whether it was sent and the sent message's id.\n- `deleted` and `mailboxErrors`: for a rejected email draft, whether it was discarded and what went wrong for each copy that could not be.\n- `interactionId` and `reviewId`: the email thread and the review the answer is about.\n- `error`: for a saved email draft, why sending or discarding failed. The decision is still recorded. An error from\n  the email and calendar provider reads as `The email and calendar provider returned an error.`\n"
           },
           "orchestratorError": {
             "type": "string",
@@ -19265,19 +19264,13 @@
             "nullable": true,
             "description": "When it last ran. Null before its first run."
           },
-          "lastRunId": {
-            "type": "string",
-            "nullable": true,
-            "description": "The id of its last run."
-          },
           "outputSchema": {
             "$ref": "#/components/schemas/ScoutOutputSchema"
           },
           "metadata": {
             "$ref": "#/components/schemas/ScoutAuditMetadata"
           }
-        },
-        "additionalProperties": true
+        }
       },
       "GlobalScoutStateChange": {
         "type": "object",
@@ -19407,27 +19400,6 @@
               "archived"
             ],
             "description": "`new` (unread), `read`, or `archived`. This API sets `read`; it does not archive."
-          },
-          "raw_output": {
-            "type": "object",
-            "additionalProperties": true,
-            "description": "The Scout's structured output for this signal, in the shape of its output schema."
-          },
-          "eventId": {
-            "type": "string",
-            "description": "The id of the detection event. Internal; unique per run."
-          },
-          "parallelMonitorId": {
-            "type": "string",
-            "description": "The id of the monitor or run that produced the signal. Internal."
-          },
-          "taskRunId": {
-            "type": "string",
-            "description": "The id of the custom Scout run that produced the signal. Internal; absent for built-in Scouts."
-          },
-          "webhook_timestamp": {
-            "type": "string",
-            "description": "When the result was delivered. Internal."
           },
           "metadata": {
             "$ref": "#/components/schemas/ScoutAuditMetadata"
@@ -19657,7 +19629,7 @@
       },
       "WorkspaceProfile": {
         "type": "object",
-        "description": "The workspace's profile and knowledge base. The response also carries other workspace settings that this page does not document. Rely only on the fields listed here.",
+        "description": "The workspace's profile and knowledge base. The response carries only the fields listed here; a field that is not set is absent.",
         "properties": {
           "id": {
             "allOf": [
@@ -19678,6 +19650,10 @@
           "name": {
             "type": "string",
             "description": "The workspace's name."
+          },
+          "email": {
+            "type": "string",
+            "description": "The workspace's contact email. Absent when not set."
           },
           "businessContext": {
             "type": "string",
@@ -19721,6 +19697,85 @@
           "logo": {
             "type": "string",
             "description": "The logo, as a file id or the https URL of a file stored in Heliyos. Absent when not set."
+          },
+          "summary": {
+            "type": "string",
+            "description": "A summary of the workspace. Empty string when not set."
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "`false` when the workspace is deactivated."
+          },
+          "organizationType": {
+            "type": "string",
+            "enum": [
+              "STANDARD",
+              "AGENCY"
+            ],
+            "description": "The kind of workspace, `STANDARD` unless set otherwise."
+          },
+          "billingStatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "trialing",
+              "past_due",
+              "paused",
+              "canceled",
+              "incomplete",
+              "incomplete_expired",
+              "pending_payment"
+            ],
+            "description": "The status of the workspace's subscription."
+          },
+          "trialPeriodDays": {
+            "type": "integer",
+            "description": "The length of the trial in days. `0` when there is no trial."
+          },
+          "planType": {
+            "type": "string",
+            "enum": [
+              "Basic",
+              "Pro",
+              "Custom"
+            ],
+            "description": "An older plan field, kept for compatibility. It can be absent or out of date: do not rely on it for the current plan."
+          },
+          "planValue": {
+            "type": "number",
+            "description": "An older plan field, kept for compatibility. Can be absent or out of date."
+          },
+          "totalCredits": {
+            "type": "number",
+            "description": "An older credit field, kept for compatibility. Can be absent or out of date: do not rely on it for the current credit balance."
+          },
+          "totalCreditsLeft": {
+            "type": "number",
+            "description": "An older credit field, kept for compatibility. Can be absent or out of date."
+          },
+          "createdBy": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ObjectId"
+              }
+            ],
+            "description": "The user who created the workspace."
+          },
+          "productsInformation": {
+            "type": "string",
+            "description": "Workspaces set up before `knowledgeBase` existed can still carry this text, and the next three, at the root. They are earlier copies of the knowledge base texts: read `knowledgeBase` instead."
+          },
+          "painPoints": {
+            "type": "string",
+            "description": "An earlier copy of `knowledgeBase.painPoints` on older workspaces. Read `knowledgeBase` instead."
+          },
+          "valueProposition": {
+            "type": "string",
+            "description": "An earlier copy of `knowledgeBase.valueProposition` on older workspaces. Read `knowledgeBase` instead."
+          },
+          "qualificationCriteria": {
+            "type": "string",
+            "description": "An earlier copy of `knowledgeBase.qualificationCriteria` on older workspaces. Read `knowledgeBase` instead."
           },
           "createdAt": {
             "$ref": "#/components/schemas/Timestamp"

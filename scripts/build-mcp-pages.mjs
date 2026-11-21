@@ -46,7 +46,7 @@ const MCP_GROUP_ICONS = {
   watchlist: "app-watchlist",
   labels: "app-labels",
   team: "app-teams",
-  "notification-settings": "app-preferences",
+  "notification-settings": "app-notifications",
   usage: "app-usage",
 };
 

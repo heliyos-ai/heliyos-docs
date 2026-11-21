@@ -4,6 +4,32 @@ description: "New endpoints, MCP tools and changes to the Heliyos API and MCP se
 rss: true
 ---
 
+<Update label="November 2026" description="Neutral service names" tags={["API", "MCP"]}>
+  ## Heliyos names for the services behind workers, Scouts and reviews
+
+  - [List triggers](/api-reference/workers-and-runs/list-triggers) gives each trigger's `source` as `platform`, `internal`, `mailbox`, `meetings`, `connector` or an app's own key such as `typeform`. Entries no longer carry `providerRef`.
+  - [List actions](/api-reference/workers-and-runs/list-actions) gives each action's `provider` as `mailbox`, `google-drive`, `onedrive`, `hubspot`, `web`, `web-research` or `builtin`. `heliyos_triggers_list` and `heliyos_workers_tools_list` show the same values.
+  - [Get a run](/api-reference/workers-and-runs/get-a-run) never includes model settings, and an error from an outside service reads as a neutral message such as `The model provider returned an error.` A review's `outcome.error` and the `orchestrator` answer of [Approve or reject a review](/api-reference/reviews/approve-or-reject-a-review) do the same; `orchestrator` carries only its documented keys.
+  - Signals in [List signals](/api-reference/signals/list-signals) no longer carry `raw_output`, `eventId`, `taskRunId`, `webhook_timestamp` or a monitor id. Company Scouts in [List company Scouts](/api-reference/scouts/list-company-scouts) no longer carry `lastRunId`.
+  - [Get the knowledge base](/api-reference/knowledge-base/get-the-knowledge-base) returns only the workspace profile fields it documents.
+</Update>
+
+<Update label="November 2026" description="Task and meeting filters" tags={["API", "MCP"]}>
+  ## Filter tasks by assignee and meetings by company
+
+  - [List tasks](/api-reference/tasks/list-tasks) takes `not_equals` and `not_in` on `assignedUser.id`: tasks assigned to none of those people, unassigned tasks included. `metadata.created.by` with `is_not` or `not_equals` now leaves out that person's tasks; it used to match like `is`.
+  - [List interactions](/api-reference/interactions/list-interactions) filters by the name of a linked company with the `company` field, case-insensitive, with the text operators (`contains`, `equals`, `starts_with` and the rest). It never matched before. Two conditions on the same field now both apply instead of the second replacing the first.
+  - `heliyos_tasks_list` takes `assignee_id`, a `user_id` from `heliyos_team_members_list`.
+</Update>
+
+<Update label="November 2026" description="Task list" tags={["API"]}>
+  ## Filter tasks by assignee id, smaller task lists
+
+  - [List tasks](/api-reference/tasks/list-tasks) takes `assignedUser.id` as a filter field: a user id with `equals`, or a list of user ids with `in`. Unlike `assignedUser`, which matches names, it never matches another person with a similar name.
+  - In list responses, each linked record's `schema` now carries only `_id`, `name`, `objectType` and the field that names the record. Get the task, or the object, for its other fields.
+  - Grouping [List tasks](/api-reference/tasks/list-tasks) by `dueDate` groups by day, in the new `timezone` filter key (UTC by default), instead of by exact time. Groups come back in value order with tasks without a value last, and `sort` orders the tasks inside each group. Groups by `assignedUser` carry the assignee's user id as `groupValue`.
+</Update>
+
 <Update label="November 2026" description="Billing status" tags={["API", "MCP"]}>
   ## Paused subscriptions
 

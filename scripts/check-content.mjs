@@ -8,7 +8,12 @@
  *   - any value from the env files listed in SECRET_ENV_FILES (and ./.env). Values are compared
  *     in memory and never printed.
  *  Private references
- *   - internal hosts, local paths, private repository names and source file paths.
+ *   - internal hosts, local paths, private repository names and source file paths;
+ *   - the suppliers behind the API (data, email, meeting, research, billing, sandbox, realtime
+ *     and model providers) and model ids, in any page, the API reference, data/*.json, llms*.txt,
+ *     overlays and snippets. Allowed: the two integration field names the API keeps
+ *     (VENDOR_ALLOWED), MCP client identities (the Codex logo, the Antigravity config path), crawler
+ *     names in robots.txt, licence files, client logos and build scripts (VENDOR_EXEMPT).
  *  Copy rules
  *   - em dashes and "it's not X, it's Y" in reader-facing files.
  *
@@ -51,6 +56,37 @@ const PRIVATE_PATTERNS = [
   ["source path", /\bsrc\/(core|common|auth|services|datastores?|models|workflows|utils|tools|client)\b|\b[A-Za-z]+\.(ts|tsx|py)\b(?!\))/],
   ["internal document", /\bDESIGN( V2)?\.md\b|\bCLAUDE\.md\b|\bAGENTS\.md\b/],
 ];
+
+/**
+ * Supplier and model-provider names, also inside camelCase and snake_case identifiers. The same
+ * deny-list the Heliyos API and the MCP server use for their own output: keep them in sync.
+ */
+const VENDOR_PATTERN = new RegExp(
+  [
+    /litellm|vertex(?:_ai)?|gemini|openai|anthropic|deepseek|fireworks(?:_ai)?|\bgpt-\d|\bclaude-(?:\d|opus|sonnet|haiku)|\bglm-\d|\bkimi-k\d|\bqwen\d|\bz\.ai\b|\bzai\/|aiplatform\.googleapis|generativelanguage\.googleapis/,
+    /recall[\s._-]?ai(?![a-z0-9])|(?<![a-z0-9])recall(?=[\s._-]?(?:bot|api|webhook))/,
+    /nylas|unipile|\/v3\/grants\//,
+    /parallel(?:[\s._-]?ai\b|[\s_-]?(?:run|task|monitor|find[_-]?all|webhook|processor|api\b|client)|(?=findall|runid|monitorid))|find[_-]?all|(?<![a-z0-9])exa(?:[\s._-]?ai)?(?![a-z0-9])|enrich[\s._-]?so|bright[\s_-]?data|crunchbase|diffbot|linkup|perplexity|serp[\s_-]?api|serper|thecompaniesapi|spider\.cloud/,
+    /creem/,
+    /composio/,
+    /(?<![a-z0-9])e2b(?![a-z0-9])|pusher|langfuse/,
+  ]
+    .map((rx) => rx.source)
+    .join("|"),
+  "i"
+);
+/**
+ * Text that matches VENDOR_PATTERN but is allowed: the integration fields the API keeps by
+ * decision, and MCP client identities (Codex is shown with its maker's logo; Antigravity keeps
+ * its MCP config under ~/.gemini). Removed from a line before it is tested.
+ */
+const VENDOR_ALLOWED = /composioConnectionId|composioTriggerId|\/logos\/openai\.svg|~\/\.gemini\//g;
+/** Files where supplier-like names are functional, not a disclosure of who runs the API. */
+const VENDOR_EXEMPT = (rel) =>
+  rel.startsWith("scripts/") || // build tooling, not published
+  rel.startsWith("logos/") || // MCP client logos (the Codex client's mark)
+  rel === "robots.txt" || // crawler user agents, such as PerplexityBot
+  /(^|\/)[^/]*licen[cs]e[^/]*$/i.test(rel); // font and package licences
 
 const COPY_RULES = [
   ["em dash", /—/],
@@ -95,6 +131,10 @@ for (const file of files) {
       if (re.test(line)) problems.push(`${rel}:${i + 1}: ${label}`);
     }
     if (readerFacing) for (const [label, re] of COPY_RULES) if (re.test(line)) problems.push(`${rel}:${i + 1}: copy rule: ${label}`);
+    if (!VENDOR_EXEMPT(rel)) {
+      const vendor = line.replace(VENDOR_ALLOWED, "").match(VENDOR_PATTERN);
+      if (vendor) problems.push(`${rel}:${i + 1}: supplier or model name "${vendor[0]}"`);
+    }
   });
   for (const v of secrets) if (text.includes(v)) problems.push(`${rel}: contains a value from a secret env file (not shown)`);
 }
@@ -103,4 +143,6 @@ if (problems.length) {
   console.error(`check-content: ${problems.length} problem(s)\n` + problems.map((p) => `  - ${p}`).join("\n"));
   process.exit(1);
 }
-console.log(`check-content: ${files.length} files clean (${SECRET_PATTERNS.length + PRIVATE_PATTERNS.length} patterns, ${secrets.length} secret values, copy rules)`);
+console.log(
+  `check-content: ${files.length} files clean (${SECRET_PATTERNS.length + PRIVATE_PATTERNS.length} patterns, supplier names, ${secrets.length} secret values, copy rules)`
+);

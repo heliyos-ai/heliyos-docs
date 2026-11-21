@@ -481,7 +481,7 @@ x-examples:
     name: partner_tier
     displayName: Partner tier
     description: Commercial tier agreed in the partner contract.
-    icon: PiMedal
+    icon: PiStarStroke
     type: { type: select, enum: [select], relationshipConfig: [] }
     settings:
       selectOptions:
@@ -505,7 +505,7 @@ x-examples:
     description: Resellers and referral partners.
     type: custom
     objectType: partners
-    icon: PiHandshake
+    icon: PiCommunityStroke
     viewType: table
     kanbanConfig: { _id: 6730b1c4d3e5f6a7b8c9d0e2, lanes: [] }
     fields:
@@ -513,7 +513,7 @@ x-examples:
         sequence: 1
         name: partners
         displayName: Partners
-        icon: PiHandshake
+        icon: PiCommunityStroke
         type: { type: text, enum: [text, longText, richText], relationshipConfig: [] }
         aiPrompt: { prompt: "", variables: [] }
         isAIEnabled: false
@@ -622,7 +622,7 @@ operations:
         description: Resellers and referral partners.
         type: custom
         objectType: partners
-        icon: PiHandshake
+        icon: PiCommunityStroke
         viewType: table
         kanbanConfig: { _id: 6730b1c4d3e5f6a7b8c9d0e2, lanes: [] }
         fields:

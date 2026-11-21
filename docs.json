@@ -239,7 +239,7 @@
           },
           {
             "group": "Reviews",
-            "icon": "/icons/tasks.svg",
+            "icon": "/icons/app-reviews.svg",
             "openapi": "api-reference/openapi.json",
             "pages": [
               "GET /v1/platform/reviews",
@@ -339,7 +339,7 @@
           },
           {
             "group": "Notification settings",
-            "icon": "/icons/app-preferences.svg",
+            "icon": "/icons/app-notifications.svg",
             "openapi": "api-reference/openapi.json",
             "pages": [
               "GET /v1/platform/notification-settings",
